@@ -154,7 +154,7 @@
       <div class="links">
         <a href="https://magiceden.io/marketplace/finnbot" target="_blank" rel="noopener">Buy a Bot</a>·
         <a href="https://games.finnstergram.com/" target="_blank" rel="noopener">More games</a>·
-        <a href="https://chomp.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">Leaderboard</a>
+        <a href="https://botman.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">Leaderboard</a>
       </div>
     </footer>
   </div>
@@ -200,7 +200,7 @@
   <div class="sheet" id="postedSheet"><div class="panel">
     <h2>Score posted!</h2>
     <p id="posted-text"></p>
-    <a class="ghostbtn" id="viewLb" href="https://chomp.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">View leaderboard →</a>
+    <a class="ghostbtn" id="viewLb" href="https://botman.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">View leaderboard →</a>
     <button class="again" id="againBtn" type="button">Play again (25 OIL)</button>
   </div></div>
 
@@ -221,8 +221,8 @@
    so the headless VERIFY sim can drive it; render + input are DOM-only below.
    ========================================================================== */
 
-const CFG = { name:'BOTMAN', memoNS:'CHMP', chassis:'sink-leaderboard',
-              subdomain:'chomp.finnstergram.com', port:9019, hero:106, accent:'#f2a03d', entryOIL:25, scorePost:1 };
+const CFG = { name:'BOTMAN', memoNS:'BMAN', chassis:'sink-leaderboard',
+              subdomain:'botman.finnstergram.com', port:9019, hero:106, accent:'#f2a03d', entryOIL:25, scorePost:1 };
 
 /* ---- MAZE (FinnBots-original layout; classic topology: centre house, 4 corner
    Power Beads, 2 side tunnels). ASCII = data, so the layout is checkable.
@@ -512,9 +512,9 @@ if(!HEADLESS){
   ctx.imageSmoothingEnabled=false;
   const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let s=newRun(), active=true, prevPhase='play', deadHandled=false;
-  let hi=0; try{ hi=parseInt(localStorage.getItem('chmp_hi')||'0',10)||0; }catch(e){}
+  let hi=0; try{ hi=parseInt(localStorage.getItem('bman_hi')||'0',10)||0; }catch(e){}
 
-  // hero PNG (Bot 106) — drawn inside a chomping wedge so BOTMAN himself bites
+  // hero PNG (Bot 106) — drawn inside a botmaning wedge so BOTMAN himself bites
   const hero=new Image(); let heroOK=false; hero.onload=()=>heroOK=true; hero.src='assets/hero/bot-106.png';
 
   function fitCanvas(){ const box=cv.parentElement.getBoundingClientRect();
@@ -526,13 +526,13 @@ if(!HEADLESS){
   (function(){ const l=document.querySelector('.hud .lab + .val#stat1'); const lab=l&&l.previousElementSibling; if(lab) lab.textContent='BAY '; })();
 
   // ---- audio (tiny WebAudio riffs; Mute required) ----
-  let ac=null, muted=false; try{ muted=localStorage.getItem('chmp_mute')==='1'; }catch(e){}
+  let ac=null, muted=false; try{ muted=localStorage.getItem('bman_mute')==='1'; }catch(e){}
   function tone(f,d,type,vol){ if(reduce||muted)return; try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)();
     const o=ac.createOscillator(),g=ac.createGain(); o.type=type||'square'; o.connect(g); g.connect(ac.destination);
     o.frequency.value=f; g.gain.value=(vol||0.04); o.start();
     g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+d); o.stop(ac.currentTime+d+0.02);}catch(e){} }
-  let chompTick=0;
-  function sChomp(){ chompTick^=1; tone(chompTick?150:120,0.045,'square',0.035); }
+  let botmanTick=0;
+  function sChomp(){ botmanTick^=1; tone(botmanTick?150:120,0.045,'square',0.035); }
   function sPower(){ tone(90,0.25,'sawtooth',0.05); }
   function sEat(ch){ tone(500+ch*180,0.14,'square',0.06); }
   function sDie(){ let f=520; const iv=setInterval(()=>{ tone(f,0.12,'triangle',0.05); f-=60; if(f<140)clearInterval(iv); },90); }
@@ -700,11 +700,11 @@ if(!HEADLESS){
   bindPad('padU',UP); bindPad('padD',DOWN); bindPad('padL',LEFT); bindPad('padR',RIGHT);
   // centre button repurposed as MUTE (no fire button in BOTMAN)
   (function(){ const b=document.getElementById('padFire'); if(!b)return; b.textContent='🔊'; b.setAttribute('aria-label','Mute');
-    b.addEventListener('pointerdown',e=>{ e.preventDefault(); muted=!muted; b.textContent=muted?'🔇':'🔊'; try{localStorage.setItem('chmp_mute',muted?'1':'0');}catch(_){}}); })();
+    b.addEventListener('pointerdown',e=>{ e.preventDefault(); muted=!muted; b.textContent=muted?'🔇':'🔊'; try{localStorage.setItem('bman_mute',muted?'1':'0');}catch(_){}}); })();
   const KEYS={ArrowUp:UP,ArrowDown:DOWN,ArrowLeft:LEFT,ArrowRight:RIGHT,w:UP,s:DOWN,a:LEFT,d:RIGHT,W:UP,S:DOWN,A:LEFT,D:RIGHT};
   addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeRules(); return; }
     if(e.key==='r'||e.key==='R'){ restart(); return; }
-    if(e.key==='m'||e.key==='M'){ muted=!muted; const b=document.getElementById('padFire'); if(b)b.textContent=muted?'🔇':'🔊'; try{localStorage.setItem('chmp_mute',muted?'1':'0');}catch(_){} return; }
+    if(e.key==='m'||e.key==='M'){ muted=!muted; const b=document.getElementById('padFire'); if(b)b.textContent=muted?'🔇':'🔊'; try{localStorage.setItem('bman_mute',muted?'1':'0');}catch(_){} return; }
     const d=KEYS[e.key]; if(d){ setWant(d); e.preventDefault(); } });
   // swipe on the canvas
   let tsx=0,tsy=0,tsw=false;
@@ -719,7 +719,7 @@ if(!HEADLESS){
   function resumeFree(){ s=newRun(); active=true; prevPhase='play'; deadHandled=false; queuedWant=null; overO.classList.remove('show'); }
   window.BOTMANEngine = { start:startRun, idle:idleForPaid, resumeFree:resumeFree, state:()=>s };
   function endRun(){ active=false;
-    if(s.score>hi){ hi=s.score; try{ localStorage.setItem('chmp_hi',String(hi)); }catch(e){} }
+    if(s.score>hi){ hi=s.score; try{ localStorage.setItem('bman_hi',String(hi)); }catch(e){} }
     const res={ score:s.score, bay:s.bay, timeMs:s.timeMs };
     if(window.BOTMANPaid && BOTMANPaid.onRunEnd && BOTMANPaid.onRunEnd(res)) return;
     showOver(); }
@@ -752,11 +752,11 @@ if(!HEADLESS){
   // NOTE: the score-memo SHAPE (buildScoreMemo + the result fields it carries: res.height/res.oil/...) is
   // per-game — change those to your run stats. Everything else in this layer stays byte-identical.
 /* ============================================================================
- * Bot Smash — Paid layer. CHMP sink + fun leaderboard.
+ * Bot Smash — Paid layer. BMAN sink + fun leaderboard.
  * The wallet MECHANICS below (getProvider, fetchOilBalance, buildTransferIx,
  * buildMemoIx, confirmSignature, sendPayment, onConnect, resume) are LIFTED
  * VERBATIM from the live Mr Bot index.html (itself lifted from Bot Merge Rush)
- * — only CFG values, the CHMP memo tag / pending key / sign marker, and the
+ * — only CFG values, the BMAN memo tag / pending key / sign marker, and the
  * score-memo shape change. The UI glue is Bot Smash's (single-run action game).
  * Bot Smash is real-time and UNREPLAYABLE. The leaderboard is a FUN RANKING +
  * an OIL SINK. It is NOT verified / provably fair. Records, does not verify.
@@ -790,7 +790,7 @@ if(!HEADLESS){
       TREASURY_TOKEN_ACCOUNT: '2ZBNMLZFfHCuZm9Lfc3b7ut296tRwGtapuXad7zSm1ED',
       ENTRY_FEE: 25, POST_FEE: 1, DECIMALS: 2
     };
-    var MEMO_TAG = 'CHMP';
+    var MEMO_TAG = 'BMAN';
     var wallet = { pubkey:null, oil:0 };
     var inited=false, busy=false, entrySig=null, pendingResult=null;
     var connectBtn, walletStatus;
@@ -821,7 +821,7 @@ if(!HEADLESS){
     }
 
     // ---- payment (one signed SPL transfer + memo — verbatim from Rush/Mr Bot) ----
-    var PENDING_KEY='chmp_pending_action';
+    var PENDING_KEY='bman_pending_action';
     function savePending(a){ try{ localStorage.setItem(PENDING_KEY, JSON.stringify(a)); }catch(e){} }
     function loadPending(){ try{ var v=localStorage.getItem(PENDING_KEY); return v?JSON.parse(v):null; }catch(e){ return null; } }
     function clearPending(){ try{ localStorage.removeItem(PENDING_KEY); }catch(e){} }
@@ -852,11 +852,11 @@ if(!HEADLESS){
       tx.add(buildTransferIx(sourcePubkey,destPubkey,ownerPk,needBase), buildMemoIx(ownerPk,memoText));
       tx.feePayer=ownerPk; var latest=await connection.getLatestBlockhash(); tx.recentBlockhash=latest.blockhash;
       if(useMobile){
-        var pend={ action:action, owner:wallet.pubkey, marker:'chmp_sign' };
+        var pend={ action:action, owner:wallet.pubkey, marker:'bman_sign' };
         if(action==='score' && pendingResult){ pend.entrySig=entrySig; pend.score=pendingResult.score; pend.bay=pendingResult.bay; pend.timeMs=pendingResult.timeMs; }
         savePending(pend); setStatus('Opening Phantom to approve\u2026');
         var unsigned=tx.serialize({ requireAllSignatures:false, verifySignatures:false });
-        PhantomMobile.signTransaction(unsigned, window.location.origin+window.location.pathname, 'chmp_sign'); return null;
+        PhantomMobile.signTransaction(unsigned, window.location.origin+window.location.pathname, 'bman_sign'); return null;
       }
       var signed=await provider.signTransaction(tx); setStatus('Sending payment\u2026');
       var rawSig=await connection.sendRawTransaction(signed.serialize(),{ skipPreflight:false }); setStatus('Payment sent \u2014 waiting for confirmation\u2026');
@@ -864,7 +864,7 @@ if(!HEADLESS){
       return rawSig; // base58 on-chain signature
     }
 
-    // ---- score memo (CHMP — no seed, no move-log, no replay; records NOT verified) ----
+    // ---- score memo (BMAN — no seed, no move-log, no replay; records NOT verified) ----
     function buildScoreMemo(res){ return MEMO_TAG+'|score|sig='+String(entrySig).slice(0,32)+'|score='+res.score+'|bay='+res.bay+'|time='+res.timeMs; }
 
     // ---- flow glue (Bot Smash: single-run action game) ---------------------
@@ -967,7 +967,7 @@ if(!HEADLESS){
         return;
       }
       connectBtn.disabled=true; connectBtn.textContent='Finishing\u2026'; setStatus('Almost there \u2014 finishing up with Phantom\u2026');
-      var pending=loadPending(); var marker=pending?pending.marker:'chmp_sign';
+      var pending=loadPending(); var marker=pending?pending.marker:'bman_sign';
       var result=window.PhantomMobile?PhantomMobile.consumePendingRedirect(marker):null;
       if(result&&result.type==='connect'){ wallet.pubkey=result.publicKey; connectBtn.textContent='Connected';
         setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026'); checkBalance(wallet.pubkey); return; }
