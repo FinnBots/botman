@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>BOTMAN — a FinnBots game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+15&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --plum:#5f4c57; --plum-deep:#3e323a; --amber:#f2a03d; --electric:#3a6ff7;
+    --peach:#f5c8a0; --soft:#fdf3e7; --ink:#3e323a; --muted:#8a7a82; --red:#c0392b;
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px;
+    --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:22px;
+    --sh1:0 1px 2px rgba(62,50,58,.12); --sh2:0 4px 14px rgba(62,50,58,.16);
+    --disp:'Jersey 15',system-ui,sans-serif; --body:'Plus Jakarta Sans',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100dvh;overflow:hidden;margin:0}
+  body{ font-family:var(--body); color:var(--ink);
+    background:radial-gradient(120% 80% at 50% 0%, var(--soft), var(--peach));
+    -webkit-font-smoothing:antialiased; user-select:none; -webkit-user-select:none; touch-action:none; }
+  .wrap{height:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column;padding:var(--s3);gap:var(--s2)}
+  .topbar{display:flex;align-items:center;gap:var(--s3);min-height:34px}
+  .pill{font-family:var(--disp);font-size:15px;letter-spacing:.5px;color:#fff;background:var(--plum);padding:2px var(--s3);border-radius:999px;box-shadow:var(--sh1);white-space:nowrap}
+  .title{font-family:var(--disp);font-size:26px;line-height:1;color:var(--plum-deep);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .iconbtn{appearance:none;border:0;background:#fff;color:var(--plum);width:32px;height:32px;border-radius:50%;font-family:var(--disp);font-size:18px;box-shadow:var(--sh1);cursor:pointer}
+  .iconbtn:focus-visible{outline:3px solid var(--electric);outline-offset:2px}
+  .modebar{display:flex;gap:var(--s1);background:rgba(255,255,255,.5);border-radius:999px;padding:3px;box-shadow:var(--sh1)}
+  .modepill{flex:1;appearance:none;border:0;cursor:pointer;font-family:var(--disp);font-size:14px;padding:5px 10px;border-radius:999px;background:transparent;color:var(--muted)}
+  .modepill.active{background:var(--amber);color:var(--plum-deep)}
+  .modepill:disabled{opacity:.5;cursor:default}
+  .modepill:focus-visible{outline:2px solid var(--electric);outline-offset:2px}
+  .testBanner{background:var(--amber);color:#4a2c10;font-weight:700;text-align:center;font-size:12px;padding:5px 10px;border-radius:var(--r-md)}
+  .testBanner.hidden{display:none}
+  .walletbar{display:none;flex-direction:column;gap:5px;background:rgba(255,255,255,.55);border-radius:var(--r-md);padding:7px var(--s3);box-shadow:var(--sh1)}
+  body.mode-paid .walletbar{display:flex}
+  .walletrow{display:flex;align-items:center;gap:8px}
+  .walletrow .lbl{font-size:12px;color:var(--plum-deep);flex:1;line-height:1.3}
+  .connect-btn{appearance:none;border:0;cursor:pointer;font-family:var(--disp);font-size:14px;background:var(--plum);color:#fff;padding:6px 16px;border-radius:999px;box-shadow:var(--sh1)}
+  .connect-btn:disabled{opacity:.6;cursor:default}
+  .wallet-status{font-size:12px;color:var(--muted);line-height:1.35}
+  .wallet-status.hidden{display:none}
+  .wallet-status.ok{color:var(--plum-deep)} .wallet-status.warn{color:var(--red)}
+  .wallet-status .addr{font-family:ui-monospace,monospace;color:var(--plum)}
+  .facts{font-size:12.5px;color:var(--plum-deep);background:rgba(255,255,255,.55);border-radius:var(--r-md);padding:6px var(--s3);text-align:center;min-height:30px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:var(--sh1)}
+  .facts b{font-weight:700}
+  .dot-sep{opacity:.4}
+  .hud{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s2) var(--s3);font-family:var(--disp);color:var(--plum-deep);background:rgba(255,255,255,.55);border-radius:var(--r-md);padding:6px var(--s4);min-height:34px;box-shadow:var(--sh1)}
+  .hud .lab{font-size:11px;color:var(--muted);letter-spacing:1px}
+  .hud .val{font-size:18px;line-height:1}
+  .hud .val.warn{color:var(--red)}
+  .lives{display:inline-flex;gap:4px;align-items:center}
+  .life{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:var(--sh1)}
+  .life.off{background:rgba(0,0,0,.14);box-shadow:none}
+  .surface{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+  /* Canvas fit — width-driven + letterbox. Tune aspect-ratio to your game (e.g. 9/16 portrait, 3/2 landscape). */
+  canvas{ width:100%;height:auto;max-width:100%;max-height:100%;aspect-ratio:3/2;background:#20150f;border-radius:var(--r-lg);box-shadow:var(--sh2);image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none; }
+  .controls{display:flex;gap:var(--s6);align-items:center;justify-content:center;background:rgba(255,255,255,.55);border-radius:var(--r-md);padding:6px var(--s4);box-shadow:var(--sh1)}
+  .dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,40px);gap:4px}
+  .ctl{appearance:none;border:0;cursor:pointer;font-family:var(--disp);font-size:20px;color:var(--plum-deep);background:#fff;border-radius:var(--r-sm);box-shadow:var(--sh1);touch-action:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:center}
+  .ctl:active,.ctl.on{transform:translateY(1px);background:var(--amber)}
+  .ctl:focus-visible{outline:3px solid var(--electric);outline-offset:2px}
+  .ctl.fire{font-size:13px;color:#fff;background:var(--plum)}
+  .ctl.fire:active,.ctl.fire.on{background:var(--plum-deep)}
+  #padU{grid-area:1/2/2/3} #padL{grid-area:2/1/3/2} #padFire{grid-area:2/2/3/3} #padR{grid-area:2/3/3/4} #padD{grid-area:3/2/4/3}
+  .foot{text-align:center;min-height:28px}
+  .foot .tag{font-family:var(--disp);font-size:13px;color:var(--muted);letter-spacing:.5px}
+  .foot .links{font-size:12px;margin-top:1px}
+  .foot a{color:var(--muted);text-decoration:none;margin:0 6px}
+  .foot a:hover{color:var(--plum)}
+  .foot a:focus-visible{outline:2px solid var(--electric);outline-offset:2px;border-radius:3px}
+  .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(42,34,48,.55);backdrop-filter:blur(2px);padding:var(--s4);z-index:20}
+  .overlay.show{display:flex}
+  body.mode-paid .modebar,body.mode-paid .walletbar{position:relative;z-index:21}
+  .card{background:var(--soft);border-radius:var(--r-xl);box-shadow:var(--sh2);max-width:380px;width:100%;padding:var(--s6);text-align:center}
+  .card h2{font-family:var(--disp);font-size:30px;margin:0 0 var(--s2);color:var(--plum-deep)}
+  .card.win h2{color:var(--amber)}
+  .card p{font-size:13.5px;line-height:1.5;margin:var(--s2) 0;color:var(--plum-deep)}
+  .card .big{font-family:var(--disp);font-size:22px;color:var(--plum-deep);margin:var(--s3) 0}
+  .card .big span{color:var(--amber)}
+  .btn{appearance:none;border:0;font-family:var(--disp);font-size:18px;color:#fff;background:var(--plum);padding:10px var(--s6);border-radius:999px;cursor:pointer;box-shadow:var(--sh1);margin-top:var(--s3)}
+  .btn:hover{background:var(--plum-deep)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn:focus-visible{outline:3px solid var(--electric);outline-offset:2px}
+  .rules{text-align:left}
+  .rules li{font-size:13px;line-height:1.55;margin:5px 0}
+  .safe{font-size:11.5px;color:var(--muted);margin-top:var(--s3)}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+  .sheet{position:fixed;inset:0;background:rgba(42,34,48,.6);display:none;align-items:center;justify-content:center;padding:var(--s4);z-index:30}
+  .sheet.show{display:flex}
+  .panel{width:100%;max-width:340px;background:var(--soft);border-radius:var(--r-xl);padding:var(--s6);box-shadow:var(--sh2);text-align:center}
+  .panel h2{font-family:var(--disp);font-size:24px;margin:0 0 var(--s2);color:var(--plum-deep)}
+  .panel p{font-size:13px;color:var(--plum-deep);margin:0 0 var(--s4);line-height:1.5}
+  .panel .again{appearance:none;border:0;cursor:pointer;font-family:var(--disp);font-size:16px;background:var(--amber);color:#4a2c10;padding:11px var(--s6);border-radius:999px;display:block;width:100%;margin-bottom:var(--s2);box-shadow:var(--sh1)}
+  .panel .ghostbtn{appearance:none;border:1px solid rgba(95,76,87,.25);cursor:pointer;font-family:var(--body);font-weight:600;font-size:14px;background:transparent;color:var(--plum);padding:9px 18px;border-radius:999px;display:block;width:100%;box-sizing:border-box;text-decoration:none;margin-bottom:var(--s2)}
+  .panel .ghostbtn:last-child{margin-bottom:0}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <span class="pill">BOT GAMES</span>
+      <h1 class="title">BOTMAN</h1>
+      <button class="iconbtn" id="restartBtn" aria-label="Restart" title="Restart (R)">⟲</button>
+      <button class="iconbtn" id="infoBtn" aria-label="How to play">ⓘ</button>
+    </header>
+
+    <div class="modebar" role="tablist" aria-label="Play mode">
+      <button class="modepill active" id="modeFree" type="button" role="tab">Free play</button>
+      <button class="modepill" id="modePaid" type="button" role="tab">Paid · 25 OIL</button>
+    </div>
+
+    <div class="testBanner hidden" id="testBanner">🧪 TEST MODE — local validator, fake $OIL. No real value moves.</div>
+
+    <div class="walletbar" id="walletbar">
+      <div class="walletrow">
+        <span class="lbl">Paid — 25 OIL entry · fun leaderboard, not verified</span>
+        <button class="connect-btn" id="connectBtn" type="button">Connect</button>
+      </div>
+      <div class="wallet-status hidden" id="walletStatus"></div>
+    </div>
+
+    <div class="facts" id="facts">
+      <span>Free to play</span><span class="dot-sep">·</span>
+      <span>wallet-free</span><span class="dot-sep">·</span>
+      <span><b>pays nothing</b></span>
+    </div>
+
+    <div class="hud" aria-live="polite">
+      <div><span class="lab">SCORE </span><span class="val" id="score">000000</span></div>
+      <div><span class="lab">TIME </span><span class="val" id="stat1">0</span></div>
+      <div><span class="lab">LIVES </span><span class="lives" id="lives"></span></div>
+    </div>
+
+    <main class="surface">
+      <canvas id="game" width="600" height="400" aria-label="BOTMAN play area."></canvas>
+    </main>
+
+    <div class="controls" aria-label="Controls">
+      <div class="dpad">
+        <button class="ctl" id="padU" type="button" aria-label="Up">▲</button>
+        <button class="ctl" id="padL" type="button" aria-label="Left">◀</button>
+        <button class="ctl fire" id="padFire" type="button" aria-label="Fire">GO</button>
+        <button class="ctl" id="padR" type="button" aria-label="Right">▶</button>
+        <button class="ctl" id="padD" type="button" aria-label="Down">▼</button>
+      </div>
+    </div>
+
+    <footer class="foot">
+      <div class="tag">a FinnBots game</div>
+      <div class="links">
+        <a href="https://magiceden.io/marketplace/finnbot" target="_blank" rel="noopener">Buy a Bot</a>·
+        <a href="https://games.finnstergram.com/" target="_blank" rel="noopener">More games</a>·
+        <a href="https://chomp.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">Leaderboard</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Rules overlay (auto-opens as an intro on first load) -->
+  <div class="overlay" id="rulesOverlay" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <div class="card">
+      <h2 id="rulesTitle">HOW TO PLAY</h2>
+      <ul class="rules">
+        <li><b>Goal:</b> Bot 106 (BOTMAN) eats every <b>Bead</b> in the maze to clear the bay.</li>
+        <li>Swipe the maze, or use arrows / WASD / the d-pad. BOTMAN keeps sliding — queue your next turn early.</li>
+        <li>Four <b>hunters</b> chase you: TICKER, SIP, CAM, DRUM. Touch one and you fold.</li>
+        <li>Eat a glowing <b>Power Bead</b> and they turn blue — chase them down for <b>200→400→800→1600</b>.</li>
+        <li>Bonus fruit twice a bay. Extra life at <b>10,000</b>. Three lives. Centre button / <b>M</b> mutes.</li>
+      </ul>
+      <p class="safe">Free play never touches a wallet, never asks for a seed phrase, and never moves a Bot.</p>
+      <button class="btn" id="rulesClose">Got it</button>
+    </div>
+  </div>
+
+  <!-- Game-over overlay (FREE) -->
+  <div class="overlay" id="overOverlay" role="dialog" aria-modal="true" aria-labelledby="overTitle">
+    <div class="card" id="overCard">
+      <h2 id="overTitle">RUN OVER</h2>
+      <div class="big">SCORE <span id="oScore">0</span></div>
+      <p>Time <b id="oTime">0:00</b></p>
+      <button class="btn" id="retryBtn">Tap to retry</button>
+    </div>
+  </div>
+
+  <!-- Paid overlay (start/run-over card; innerHTML written by the Paid controller) -->
+  <div class="overlay" id="paidOverlay" role="dialog" aria-modal="true"></div>
+
+  <!-- Kid-safety confirm gate (before any wallet code runs) -->
+  <div class="sheet" id="confirmSheet"><div class="panel">
+    <h2>Play BOTMAN — Paid</h2>
+    <p>One entry = one run. Costs <b>25 OIL</b> to the treasury (a sink). Pays nothing out — you're playing for a leaderboard spot. Bot holders: score ×1.5.<br/><br/>A <b>fun ranking</b> — not verified.</p>
+    <button class="again" id="confirmEnter" type="button">Connect &amp; Pay</button>
+    <button class="ghostbtn" id="confirmBack" type="button">Cancel</button>
+  </div></div>
+
+  <!-- Score-posted sheet -->
+  <div class="sheet" id="postedSheet"><div class="panel">
+    <h2>Score posted!</h2>
+    <p id="posted-text"></p>
+    <a class="ghostbtn" id="viewLb" href="https://chomp.finnstergram.com/leaderboard.html" target="_blank" rel="noopener">View leaderboard →</a>
+    <button class="again" id="againBtn" type="button">Play again (25 OIL)</button>
+  </div></div>
+
+<script>
+"use strict";
+/* ==========================================================================
+   BOTMAN — FinnBots. Pac-Man-loop maze chase. ENGINE (Free gameplay).
+   ▓▓▓ THIS SCRIPT IS THE ONLY PART WRITTEN PER GAME. ▓▓▓
+   Everything else in this file (head, DOM, wallet layer) is the frozen chassis.
+   Contract kept so the wallet/leaderboard layer works unchanged:
+     - export { newRun, stepGame } (headless) for the VERIFY termination sim;
+       a no-input run reaches phase 'dead' (the hunters catch a still BOTMAN,
+       three lives run out).
+     - window.BOTMANEngine = { start, idle, resumeFree, state }.
+     - on run end, hand { score, bay, timeMs } to window.BOTMANPaid.onRunEnd(res).
+     - NO wallet/RPC/memo/money symbol in here.
+   The whole world lives PURE on the run-state `s` (grid, BOTMAN, 4 hunters, timers)
+   so the headless VERIFY sim can drive it; render + input are DOM-only below.
+   ========================================================================== */
+
+const CFG = { name:'BOTMAN', memoNS:'CHMP', chassis:'sink-leaderboard',
+              subdomain:'chomp.finnstergram.com', port:9019, hero:106, accent:'#f2a03d', entryOIL:25, scorePost:1 };
+
+/* ---- MAZE (FinnBots-original layout; classic topology: centre house, 4 corner
+   Power Beads, 2 side tunnels). ASCII = data, so the layout is checkable.
+   # wall · . Bead · o Power Bead · (space) empty path/tunnel · - house door · H house interior */
+const MAZE = [
+  "############################", // 0
+  "#............##............#", // 1
+  "#.####.#####.##.#####.####.#", // 2
+  "#o####.#####.##.#####.####o#", // 3
+  "#.####.#####.##.#####.####.#", // 4
+  "#..........................#", // 5
+  "#.####.##.########.##.####.#", // 6
+  "#.####.##.########.##.####.#", // 7
+  "#......##....##....##......#", // 8
+  "######.#####.##.#####.######", // 9
+  "######.#####.##.#####.######", // 10
+  "######.##..........##.######", // 11
+  "######.##.###--###.##.######", // 12
+  "######.##.#HHHHHH#.##.######", // 13
+  "          #HHHHHH#          ", // 14  <- tunnel row; house fully enclosed
+  "######.##.#HHHHHH#.##.######", // 15
+  "######.##.########.##.######", // 16
+  "######.##..........##.######", // 17
+  "######.##.########.##.######", // 18
+  "######.##.########.##.######", // 19
+  "#............##............#", // 20
+  "#.####.#####.##.#####.####.#", // 21
+  "#.####.#####.##.#####.####.#", // 22
+  "#o..##.......  .......##..o#", // 23  <- BOTMAN start band (spaces = start, no Bead)
+  "###.##.##.########.##.##.###", // 24
+  "###.##.##.########.##.##.###", // 25
+  "#......##....##....##......#", // 26
+  "#.##########.##.##########.#", // 27
+  "#.##########.##.##########.#", // 28
+  "#..........................#", // 29
+  "############################", // 30
+];
+const W = 28, H = 31, TS = 8, WPX = W * TS;
+
+/* ---- directions (singletons; identity used for reverse checks) ---- */
+const UP = { x:0, y:-1 }, DOWN = { x:0, y:1 }, LEFT = { x:-1, y:0 }, RIGHT = { x:1, y:0 };
+function opp(d){ return d===UP?DOWN : d===DOWN?UP : d===LEFT?RIGHT : d===RIGHT?LEFT : null; }
+function isOpp(a,b){ return !!a && !!b && a.x===-b.x && a.y===-b.y; }
+const tileX = px => Math.floor(px / TS);
+const tileY = py => Math.floor(py / TS);
+const wrapX = tx => ((tx % W) + W) % W;
+
+/* ghosts may not turn UP at these tiles while in scatter/chase (classic forbidden zones) */
+const FORBID_UP = new Set(['12,11','15,11','12,23','15,23']);
+
+/* ---- tile queries ---- */
+function cellAt(tx, ty){ if(ty<0||ty>=H) return '#'; return MAZE[ty][wrapX(tx)]; }
+function playerOpen(tx, ty){ const c = cellAt(tx,ty); return c!=='#' && c!=='H' && c!=='-'; }
+function ghostOpen(tx, ty, eyes){ const c = cellAt(tx,ty); if(c==='#') return false; if(eyes) return true; return c!=='H' && c!=='-'; }
+function onTunnelRow(py){ return tileY(py) === 14; }
+
+/* ---- tuning ---- */
+const READY_MS=1500, DYING_MS=1300, BAYCLEAR_MS=1700, FREEZE_MS=520, EAT_STALL=18;
+function playerSpd(bay){ return 0.066 * Math.min(1 + (bay-1)*0.035, 1.32); }
+function ghostSpd(bay){ return 0.062 * Math.min(1 + (bay-1)*0.05, 1.46); }
+function frightSpd(bay){ return 0.044 * Math.min(1 + (bay-1)*0.02, 1.2); }
+const EYES_SPD = 0.17;
+function frightMs(bay){ if(bay>=21) return 0; if(bay===1) return 6000; if(bay<=4) return 5000; if(bay<=16) return Math.max(1000, 5000-(bay-4)*330); return 1000; }
+function fruitPoints(bay){ const t=[100,300,500,700,1000,2000,3000,5000]; return t[Math.min(bay-1, t.length-1)]; }
+const S=sec=>({mode:'scatter',dur:sec*1000}), C=sec=>({mode:'chase',dur:sec===Infinity?Infinity:sec*1000});
+function schedule(bay){
+  if(bay===1)  return [S(7),C(20),S(7),C(20),S(5),C(20),S(5),C(Infinity)];
+  if(bay<=4)   return [S(7),C(20),S(7),C(20),S(5),C(20),S(0.02),C(Infinity)];
+  return              [S(5),C(20),S(5),C(20),S(5),C(20),S(0.02),C(Infinity)];
+}
+
+/* ---- deterministic RNG (frightened turns; keeps the headless sim reproducible) ---- */
+function rng(s){ s.rng = (s.rng * 1103515245 + 12345) & 0x7fffffff; return s.rng / 0x7fffffff; }
+
+/* ---- build a fresh dots grid from the maze; returns {grid,total} ---- */
+function buildDots(){ let total=0; const grid=[]; for(let y=0;y<H;y++){ const row=[]; for(let x=0;x<W;x++){ const c=MAZE[y][x]; if(c==='.'){ row.push(1); total++; } else if(c==='o'){ row.push(2); total++; } else row.push(0); } grid.push(row); } return {grid,total}; }
+
+function freshGhosts(){
+  return [
+    { name:'TICKER', px:108, py:92,  dir:LEFT, state:'scatter', corner:{x:25,y:0},  acc:0, homeT:0 },
+    { name:'SIP',    px:108, py:116, dir:UP,   state:'home',    corner:{x:2,y:0},   acc:0, homeT:0 },
+    { name:'CAM',    px:92,  py:116, dir:UP,   state:'home',    corner:{x:25,y:30}, acc:0, homeT:0 },
+    { name:'DRUM',   px:124, py:116, dir:DOWN, state:'home',    corner:{x:2,y:30},  acc:0, homeT:0 },
+  ];
+}
+function placePlayer(s){ s.player = { px:108, py:188, dir:LEFT, want:null, acc:0, eatStall:0 }; }
+
+function loadBay(s){
+  const d = buildDots(); s.dots = d.grid; s.dotsLeft = d.total; s.dotsTotal = d.total;
+  s.ghosts = freshGhosts();
+  placePlayer(s);
+  s.chaseMode='scatter'; s.modeIdx=0; s.modeT=0; s.frightT=0; s.chain=0;
+  s.runT=0; s.sinceEat=0; s.eatenThisLife=0;
+  s.fruit=null; s.fruitCount=0;
+  s.sub='ready'; s.subT=0;
+}
+
+function newRun(){
+  const s = { phase:'play', score:0, lives:3, bay:1, timeMs:0, extra:false, freezeT:0, rng:0x2f6e2b1 };
+  loadBay(s);
+  return s;
+}
+
+/* ---- ghost targeting (the four brains) ---- */
+function ghostTarget(s, g){
+  if(g.state==='eyes') return { x:13, y:11 };                // pen entrance (then scripted enter)
+  if(g.state==='scatter') return g.corner;
+  const p = s.player, pt = { x:tileX(p.px), y:tileY(p.py) }, pd = p.dir || {x:0,y:0};
+  if(g.name==='TICKER') return pt;                            // direct chase
+  if(g.name==='SIP'){ const t={ x:pt.x+pd.x*4, y:pt.y+pd.y*4 }; if(pd.y===-1) t.x-=4; return t; } // 4 ahead (+ up-overflow homage)
+  if(g.name==='CAM'){ const two={ x:pt.x+pd.x*2, y:pt.y+pd.y*2 }; if(pd.y===-1) two.x-=2;         // flank: double TICKER->2-ahead
+    const tk=s.ghosts[0]; const tt={ x:tileX(tk.px), y:tileY(tk.py) }; return { x:2*two.x-tt.x, y:2*two.y-tt.y }; }
+  /* DRUM: shy — chase when far (>8 tiles), else scatter to his corner */
+  const dx=pt.x-tileX(g.px), dy=pt.y-tileY(g.py);
+  return (dx*dx+dy*dy) > 64 ? pt : g.corner;
+}
+
+function ghostDirs(s, g, tx, ty){
+  const order=[UP,LEFT,DOWN,RIGHT], rev=opp(g.dir), out=[];
+  const scary = (g.state!=='frightened' && g.state!=='eyes');
+  for(const d of order){
+    if(rev && d.x===rev.x && d.y===rev.y) continue;
+    if(scary && d===UP && FORBID_UP.has(tx+','+ty)) continue;
+    if(ghostOpen(tx+d.x, ty+d.y, g.state==='eyes')) out.push(d);
+  }
+  if(out.length===0 && rev) out.push(rev);   // dead-end: forced reverse
+  return out;
+}
+function pickMin(dirs, tx, ty, tgt){
+  let best=dirs[0], bd=Infinity;
+  for(const d of dirs){ const nx=tx+d.x, ny=ty+d.y, ddx=nx-tgt.x, ddy=ny-tgt.y, dist=ddx*ddx+ddy*ddy; if(dist<bd){ bd=dist; best=d; } }
+  return best;
+}
+
+/* ---- movement ---- */
+function wrapEntity(e){ if(e.px<0) e.px+=WPX; else if(e.px>=WPX) e.px-=WPX; }
+
+function stepPlayerPixel(s, ev){
+  const p=s.player;
+  if(p.want && p.dir && isOpp(p.want, p.dir)){ p.dir=p.want; }     // reverse allowed any time
+  const centered = (p.px%TS===4 && p.py%TS===4);
+  if(centered){
+    const tx=tileX(p.px), ty=tileY(p.py), cell=s.dots[ty][wrapX(tx)];
+    if(cell===1){ s.dots[ty][wrapX(tx)]=0; s.dotsLeft--; s.score+=10; s.eatenThisLife++; s.sinceEat=0; p.eatStall=EAT_STALL; ev.dot=true; }
+    else if(cell===2){ s.dots[ty][wrapX(tx)]=0; s.dotsLeft--; s.score+=50; s.eatenThisLife++; s.sinceEat=0; eatPower(s); ev.power=true; }
+    if(s.dotsLeft<=0){ s.sub='bayclear'; s.subT=0; ev.bay=true; return; }
+    if(p.want){ if(playerOpen(tx+p.want.x, ty+p.want.y)){ p.dir=p.want; } }
+    if(!p.dir || !playerOpen(tx+p.dir.x, ty+p.dir.y)) return;       // blocked / standing still
+  }
+  if(p.dir){ p.px+=p.dir.x; p.py+=p.dir.y; wrapEntity(p); }
+}
+function movePlayer(s, dt, ev){
+  const p=s.player; let spd=playerSpd(s.bay);
+  p.acc += spd*dt;
+  if(p.eatStall>0){ p.eatStall-=dt; p.acc -= spd*dt*0.5; if(p.acc<0)p.acc=0; }  // slightly slower while chewing
+  let n=Math.floor(p.acc); p.acc-=n;
+  while(n-->0 && s.sub==='run'){ stepPlayerPixel(s, ev); }
+}
+
+function eatPower(s){
+  s.chain=0;
+  const d=frightMs(s.bay);
+  for(const g of s.ghosts){ if(g.state==='scatter'||g.state==='chase'){ if(d>0){ g.state='frightened'; g.acc=0; } if(g.dir) g.dir=opp(g.dir); } }
+  if(d>0) s.frightT=d;
+}
+function endFright(s){ for(const g of s.ghosts){ if(g.state==='frightened'){ g.state=s.chaseMode; g.acc=0; } } s.frightT=0; }
+
+function advanceMode(s, dt){
+  const sched=schedule(s.bay), cur=sched[s.modeIdx];
+  if(!cur || cur.dur===Infinity) return;
+  s.modeT+=dt;
+  if(s.modeT>=cur.dur){
+    s.modeIdx++; s.modeT=0; const nx=sched[s.modeIdx]; if(!nx) return;
+    s.chaseMode=nx.mode;
+    for(const g of s.ghosts){ if(g.state==='scatter'||g.state==='chase'){ g.state=s.chaseMode; if(g.dir) g.dir=opp(g.dir); } }
+  }
+}
+
+function startLeave(g){ g.state='leaving'; g.acc=0; }
+function releaseLogic(s, dt){
+  const g1=s.ghosts[1], g2=s.ghosts[2], g3=s.ghosts[3], lvl=s.bay;
+  if(g1.state==='home' && !g1.homeT && s.runT>500) startLeave(g1);
+  const camT=Math.max(0, 30-(lvl-1)*10);
+  if(g2.state==='home' && !g2.homeT && s.eatenThisLife>=camT && g1.state!=='home') startLeave(g2);
+  const drumT=Math.max(0, 60-(lvl-1)*15);
+  if(g3.state==='home' && !g3.homeT && s.eatenThisLife>=drumT && g2.state!=='home') startLeave(g3);
+  if(s.sinceEat>4000){ const g=[g1,g2,g3].find(x=>x.state==='home' && !x.homeT); if(g){ startLeave(g); s.sinceEat=0; } } // global anti-stall
+}
+
+function scriptedLeave(s, g, dt){
+  const v=0.06*dt;
+  if(Math.abs(g.px-108)>0.6){ g.px += Math.sign(108-g.px)*Math.min(v, Math.abs(108-g.px)); return; }
+  g.px=108;
+  if(g.py>92){ g.py -= Math.min(v, g.py-92); return; }
+  g.py=92; g.acc=0; g.state=s.chaseMode; g.dir=LEFT;
+}
+function scriptedEnter(s, g, dt){
+  const v=0.10*dt;
+  if(g.py<116){ g.py += Math.min(v, 116-g.py); return; }
+  g.py=116; g.px=108; g.acc=0; g.state='home'; g.homeT=520;   // short sit, then leave
+}
+function stepGhostPixel(s, g){
+  if(g.px%TS===4 && g.py%TS===4){
+    const tx=tileX(g.px), ty=tileY(g.py);
+    if(g.state==='eyes' && tx===13 && ty===11){ g.state='entering'; g.acc=0; return; }
+    if(g.state==='frightened'){ const dirs=ghostDirs(s,g,tx,ty); g.dir = dirs[Math.floor(rng(s)*dirs.length)] || opp(g.dir); }
+    else { const dirs=ghostDirs(s,g,tx,ty); g.dir = pickMin(dirs, tx, ty, ghostTarget(s,g)); }
+  }
+  if(g.dir){ g.px+=g.dir.x; g.py+=g.dir.y; wrapEntity(g); }
+}
+function moveGhost(s, g, dt){
+  if(g.state==='home'){ if(g.homeT>0){ g.homeT-=dt; if(g.homeT<=0){ g.homeT=0; startLeave(g); } } return; }
+  if(g.state==='leaving'){ scriptedLeave(s,g,dt); return; }
+  if(g.state==='entering'){ scriptedEnter(s,g,dt); return; }
+  let spd = g.state==='eyes' ? EYES_SPD : g.state==='frightened' ? frightSpd(s.bay) : ghostSpd(s.bay);
+  if(g.state!=='eyes' && onTunnelRow(g.py)) spd*=0.5;      // hunters crawl in the tunnel
+  g.acc += spd*dt; let n=Math.floor(g.acc); g.acc-=n;
+  while(n-->0) stepGhostPixel(s, g);
+}
+
+function checkCollisions(s, ev){
+  const p=s.player;
+  for(const g of s.ghosts){
+    if(g.state==='eyes'||g.state==='home'||g.state==='leaving'||g.state==='entering') continue;
+    const dx=g.px-p.px, dy=g.py-p.py;
+    if(dx*dx+dy*dy < 42){
+      if(g.state==='frightened'){ const pts=200*Math.pow(2, s.chain); s.chain=Math.min(s.chain+1, 3); s.score+=pts; g.state='eyes'; g.acc=0; s.freezeT=FREEZE_MS; ev.eat=pts; }
+      else { die(s, ev); return; }
+    }
+  }
+}
+function die(s, ev){ s.sub='dying'; s.subT=0; s.player.dir=null; ev.die=true; }
+function afterDeath(s, ev){
+  if(s.lives<=1){ s.phase='dead'; ev.over=true; return; }
+  s.lives--; ev.respawn=true;
+  s.ghosts=freshGhosts(); placePlayer(s);
+  s.chaseMode='scatter'; s.modeIdx=0; s.modeT=0; s.frightT=0; s.chain=0;
+  s.runT=0; s.sinceEat=0; s.eatenThisLife=0; s.fruit=null;
+  s.sub='ready'; s.subT=0;
+}
+function nextBay(s){
+  s.bay++; loadBay(s);   // fresh Beads + positions + timers; score/lives carry over
+}
+
+function spawnFruit(s){ s.fruitCount++; s.fruit={ tx:13, ty:17, px:108, py:140, t:9000, points:fruitPoints(s.bay), kind:Math.min(s.bay,8) }; }
+function updateFruit(s, dt, ev){
+  const eatenBay = s.dotsTotal - s.dotsLeft;
+  if(s.fruitCount<1 && eatenBay>=70) spawnFruit(s);
+  else if(s.fruitCount<2 && eatenBay>=170) spawnFruit(s);
+  if(s.fruit){ s.fruit.t-=dt; if(s.fruit.t<=0){ s.fruit=null; return; }
+    const p=s.player; if(tileX(p.px)===s.fruit.tx && tileY(p.py)===s.fruit.ty){ s.score+=s.fruit.points; ev.fruit=s.fruit.points; s.fruit=null; } }
+}
+
+/* ---- the one pure step ---- */
+function stepGame(s, dt){
+  const ev={};
+  if(s.phase!=='play') return ev;
+  s.timeMs+=dt;
+  if(s.sub==='ready'){ s.subT+=dt; if(s.subT>=READY_MS){ s.sub='run'; s.subT=0; } return ev; }
+  if(s.sub==='dying'){ s.subT+=dt; if(s.subT>=DYING_MS) afterDeath(s, ev); return ev; }
+  if(s.sub==='bayclear'){ s.subT+=dt; if(s.subT>=BAYCLEAR_MS) nextBay(s); return ev; }
+  /* sub === 'run' */
+  if(s.freezeT>0){ s.freezeT-=dt; return ev; }        // brief pause after eating a hunter
+  s.runT+=dt; s.sinceEat+=dt;
+  if(s.frightT>0){ s.frightT-=dt; if(s.frightT<=0) endFright(s); } else advanceMode(s, dt);
+  movePlayer(s, dt, ev);
+  if(s.sub!=='run') return ev;                         // a Bead just cleared the bay
+  releaseLogic(s, dt);
+  for(const g of s.ghosts) moveGhost(s, g, dt);
+  checkCollisions(s, ev);
+  if(s.sub!=='run') return ev;                         // died this step
+  updateFruit(s, dt, ev);
+  if(!s.extra && s.score>=10000){ s.extra=true; s.lives++; ev.extra=true; }
+  return ev;
+}
+
+/* ---- headless export for VERIFY (skip DOM under Node) ---- */
+const HEADLESS = (typeof document === 'undefined');
+if(HEADLESS){ module.exports = { CFG, MAZE, W, H, TS, newRun, stepGame }; }
+
+/* ======================= DOM / RENDER / INPUT (browser) =================== */
+if(!HEADLESS){
+(function(){
+  const OY=24, MW=W*TS, MH=H*TS, CW=MW, CH=MH+OY+16;          // canvas 224 x 288
+  const cv=document.getElementById('game'), ctx=cv.getContext('2d');
+  cv.width=CW; cv.height=CH; cv.style.aspectRatio=CW+'/'+CH;
+  ctx.imageSmoothingEnabled=false;
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let s=newRun(), active=true, prevPhase='play', deadHandled=false;
+  let hi=0; try{ hi=parseInt(localStorage.getItem('chmp_hi')||'0',10)||0; }catch(e){}
+
+  // hero PNG (Bot 106) — drawn inside a chomping wedge so BOTMAN himself bites
+  const hero=new Image(); let heroOK=false; hero.onload=()=>heroOK=true; hero.src='assets/hero/bot-106.png';
+
+  function fitCanvas(){ const box=cv.parentElement.getBoundingClientRect();
+    const ar=CW/CH; let w=box.width, h=w/ar; if(h>box.height){ h=box.height; w=h*ar; }
+    cv.style.width=Math.max(80,Math.floor(w))+'px'; cv.style.height=Math.max(44,Math.floor(h))+'px'; }
+  addEventListener('resize',fitCanvas); fitCanvas(); setTimeout(fitCanvas,120);
+
+  // relabel the chassis HUD middle stat (TIME -> BAY)
+  (function(){ const l=document.querySelector('.hud .lab + .val#stat1'); const lab=l&&l.previousElementSibling; if(lab) lab.textContent='BAY '; })();
+
+  // ---- audio (tiny WebAudio riffs; Mute required) ----
+  let ac=null, muted=false; try{ muted=localStorage.getItem('chmp_mute')==='1'; }catch(e){}
+  function tone(f,d,type,vol){ if(reduce||muted)return; try{ ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    const o=ac.createOscillator(),g=ac.createGain(); o.type=type||'square'; o.connect(g); g.connect(ac.destination);
+    o.frequency.value=f; g.gain.value=(vol||0.04); o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+d); o.stop(ac.currentTime+d+0.02);}catch(e){} }
+  let chompTick=0;
+  function sChomp(){ chompTick^=1; tone(chompTick?150:120,0.045,'square',0.035); }
+  function sPower(){ tone(90,0.25,'sawtooth',0.05); }
+  function sEat(ch){ tone(500+ch*180,0.14,'square',0.06); }
+  function sDie(){ let f=520; const iv=setInterval(()=>{ tone(f,0.12,'triangle',0.05); f-=60; if(f<140)clearInterval(iv); },90); }
+  function sBay(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.12,'square',0.05),i*90)); }
+  function sExtra(){ [523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,0.18,'triangle',0.06),i*70)); }
+  function sFruit(){ [660,880].forEach((f,i)=>setTimeout(()=>tone(f,0.12,'square',0.05),i*80)); }
+
+  // ---- overlays ----
+  const rulesO=document.getElementById('rulesOverlay'), overO=document.getElementById('overOverlay'),
+        paidO=document.getElementById('paidOverlay'), infoBtn=document.getElementById('infoBtn');
+  const rulesShown=()=>rulesO.classList.contains('show');
+  function openRules(){ rulesO.classList.add('show'); const b=document.getElementById('rulesClose'); if(b)b.focus(); }
+  function closeRules(){ rulesO.classList.remove('show'); infoBtn.focus(); }
+  infoBtn.onclick=openRules; document.getElementById('rulesClose').onclick=closeRules;
+  rulesO.addEventListener('click',e=>{ if(e.target===rulesO) closeRules(); });
+  function restart(){ s=newRun(); active=true; prevPhase='play'; deadHandled=false; overO.classList.remove('show'); paidO.classList.remove('show'); }
+  document.getElementById('restartBtn').onclick=restart;
+
+  function pad(n,w){ return String(n).padStart(w,'0'); }
+  function mmss(ms){ const t=Math.floor(ms/1000); return Math.floor(t/60)+':'+pad(t%60,2); }
+  function showOver(){ const ot=document.getElementById('overTitle'); if(ot) ot.textContent='SHIFT OVER';
+    document.getElementById('oScore').textContent=String(s.score);
+    document.getElementById('oTime').textContent='Bay '+s.bay+' · '+mmss(s.timeMs);
+    const rb=document.getElementById('retryBtn'); if(rb) rb.textContent='Tap to retry';
+    overO.classList.add('show'); if(rb) rb.focus(); }
+  document.getElementById('retryBtn').onclick=restart;
+
+  // ---- HUD (chassis DOM) ----
+  const elScore=document.getElementById('score'), elStat1=document.getElementById('stat1'), elLives=document.getElementById('lives');
+  let livesShown=-1;
+  function syncHUD(){ elScore.textContent=pad(s.score,6); elStat1.textContent=String(s.bay);
+    const shown=Math.max(0,s.lives-1);
+    if(shown!==livesShown){ livesShown=shown; elLives.innerHTML=''; for(let i=0;i<Math.min(shown,6);i++){ const d=document.createElement('span'); d.className='life'; elLives.appendChild(d);} } }
+
+  /* ================= RENDER ================= */
+  // Pre-render the wall lines once (static per maze) to an offscreen buffer.
+  const wallBuf=document.createElement('canvas'); wallBuf.width=CW; wallBuf.height=CH;
+  function buildWalls(){
+    const b=wallBuf.getContext('2d'); b.clearRect(0,0,CW,CH);
+    b.strokeStyle='#3a6ff7'; b.lineWidth=1.6; b.lineCap='round'; b.lineJoin='round';
+    b.shadowColor='rgba(58,111,247,.65)'; b.shadowBlur=3;
+    const isW=(x,y)=> cellAt(x,y)==='#';
+    const isPath=(x,y)=>{ const c=cellAt(x,y); return c==='.'||c==='o'||c===' '; };
+    const ins=1.4;
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      if(!isPath(x,y)) continue;
+      const X=x*TS, Y=y*TS+OY;
+      // outline each corridor edge that faces a wall -> the classic maze lines
+      if(isW(x,y-1)){ b.beginPath(); b.moveTo(X+ins,Y+ins); b.lineTo(X+TS-ins,Y+ins); b.stroke(); }
+      if(isW(x,y+1)){ b.beginPath(); b.moveTo(X+ins,Y+TS-ins); b.lineTo(X+TS-ins,Y+TS-ins); b.stroke(); }
+      if(isW(x-1,y)){ b.beginPath(); b.moveTo(X+ins,Y+ins); b.lineTo(X+ins,Y+TS-ins); b.stroke(); }
+      if(isW(x+1,y)){ b.beginPath(); b.moveTo(X+TS-ins,Y+ins); b.lineTo(X+TS-ins,Y+TS-ins); b.stroke(); }
+    }
+    // house door — an amber bar
+    b.shadowBlur=0; b.strokeStyle='#f2a03d'; b.lineWidth=2;
+    b.beginPath(); b.moveTo(13*TS, 12*TS+OY+4); b.lineTo(15*TS, 12*TS+OY+4); b.stroke();
+  }
+  buildWalls();
+
+  function drawBg(){
+    const g=ctx.createLinearGradient(0,0,0,CH);
+    g.addColorStop(0,'#241a2b'); g.addColorStop(0.5,'#1c1420'); g.addColorStop(1,'#120d16');
+    ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+  }
+  function drawDots(){
+    ctx.save();
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const c=s.dots[y][x]; if(!c) continue;
+      const cx=x*TS+4, cy=y*TS+OY+4;
+      if(c===1){ ctx.fillStyle='#fdf3e7'; ctx.fillRect(cx-1,cy-1,2,2); }
+      else { const r=2.4+0.9*Math.sin(s.timeMs*0.012); ctx.fillStyle='#f2a03d';
+        ctx.shadowColor='rgba(242,160,61,.8)'; ctx.shadowBlur=5; ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.fill(); ctx.shadowBlur=0; }
+    }
+    ctx.restore();
+  }
+  function dirAngle(d){ return d===RIGHT?0 : d===DOWN?Math.PI/2 : d===LEFT?Math.PI : d===UP?-Math.PI/2 : 0; }
+  function drawBotman(){
+    const p=s.player, x=p.px, y=p.py+OY, R=8;
+    let mouth;
+    if(s.sub==='dying'){ mouth = 0.06 + (Math.PI-0.12)*Math.min(1,s.subT/DYING_MS); }
+    else if(s.sub==='ready'){ mouth=0.28; }
+    else { const moving = !!p.dir; mouth = moving ? (0.10+0.30*Math.abs(Math.sin(s.timeMs*0.02))) : 0.10; }
+    ctx.save(); ctx.translate(x,y);
+    const rot=dirAngle(p.dir||LEFT);
+    ctx.save(); ctx.rotate(rot);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,R, mouth, Math.PI*2-mouth); ctx.closePath(); ctx.clip();
+    ctx.rotate(-rot);
+    if(heroOK){ ctx.drawImage(hero,-R,-R,R*2,R*2); }
+    else { ctx.fillStyle='#f2c14e'; ctx.beginPath(); ctx.arc(0,0,R,0,7); ctx.fill(); }
+    ctx.restore(); ctx.restore();
+  }
+  const GCOL={ TICKER:'#e5484d', SIP:'#ff9ec7', CAM:'#58c7d6', DRUM:'#f2a03d' };
+  function drawGhost(g){
+    const x=g.px, y=g.py+OY, R=7;
+    const flash = g.state==='frightened' && s.frightT<2000 && Math.floor(s.frightT/220)%2===0;
+    const eyesOnly = g.state==='eyes';
+    let body = g.state==='frightened' ? (flash?'#fdf3e7':'#3a3af7') : GCOL[g.name];
+    if(!eyesOnly){
+      ctx.fillStyle=body;
+      ctx.beginPath();
+      ctx.arc(x, y-1, R, Math.PI, 0);           // rounded dome
+      ctx.lineTo(x+R, y+R-1);
+      // wavy skirt
+      const feet=3, fw=(2*R)/feet;
+      for(let i=0;i<feet;i++){ const fx=x+R-i*fw; ctx.lineTo(fx-fw/2, y+R-3); ctx.lineTo(fx-fw, y+R-1); }
+      ctx.lineTo(x-R, y-1); ctx.closePath(); ctx.fill();
+      // FinnBot visor band
+      ctx.fillStyle='rgba(20,14,22,.45)'; ctx.fillRect(x-R+1, y-3, 2*R-2, 5);
+      // antenna
+      ctx.fillStyle=body; ctx.fillRect(x-0.5, y-R-3, 1.5, 3); ctx.fillRect(x-1, y-R-4, 2.5,2);
+    }
+    if(g.state==='frightened' && !flash){
+      ctx.fillStyle='#fdf3e7'; ctx.fillRect(x-3,y-2,2,2); ctx.fillRect(x+1,y-2,2,2);      // pale eyes
+      ctx.strokeStyle='#fdf3e7'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x-3,y+2); ctx.lineTo(x-1,y+1); ctx.lineTo(x+1,y+2); ctx.lineTo(x+3,y+1); ctx.stroke();
+    } else if(flash){
+      ctx.fillStyle='#c0392b'; ctx.fillRect(x-3,y-2,2,2); ctx.fillRect(x+1,y-2,2,2);
+    } else {
+      const d=g.dir||LEFT;
+      ctx.fillStyle='#fdf3e7'; ctx.beginPath(); ctx.arc(x-2.4,y-1,2.1,0,7); ctx.arc(x+2.4,y-1,2.1,0,7); ctx.fill();
+      ctx.fillStyle='#233'; ctx.beginPath(); ctx.arc(x-2.4+d.x*1.1,y-1+d.y*1.1,1.1,0,7); ctx.arc(x+2.4+d.x*1.1,y-1+d.y*1.1,1.1,0,7); ctx.fill();
+    }
+  }
+  function drawFruit(){
+    if(!s.fruit) return; const x=s.fruit.px, y=s.fruit.py+OY, k=s.fruit.kind;
+    const cols=['#f2a03d','#58c7d6','#7ad19a','#e5484d','#c39bd3','#7fb0ff','#ffd166','#ff8fab'];
+    ctx.save();
+    ctx.fillStyle=cols[(k-1)%cols.length]; ctx.strokeStyle='#120d16'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(x-1.3,y-1.3,1.2,0,7); ctx.fill();
+    ctx.fillStyle='#7ad19a'; ctx.fillRect(x-0.7,y-6,1.5,2.4);          // stem/leaf
+    ctx.restore();
+  }
+  function drawHud(){
+    ctx.fillStyle='#fdf3e7'; ctx.font='7px "Jersey 15", monospace'; ctx.textBaseline='middle';
+    ctx.textAlign='left'; ctx.fillText('1UP '+pad(s.score,6), 4, 8);
+    ctx.textAlign='center'; ctx.fillStyle='#f2a03d'; ctx.fillText('BOTMAN', CW/2, 8);
+    ctx.textAlign='right'; ctx.fillStyle='#fdf3e7'; ctx.fillText('HI '+pad(Math.max(hi,s.score),6), CW-4, 8);
+    // bottom band: lives as little bot faces + BAY
+    ctx.textAlign='left';
+    for(let i=0;i<Math.min(Math.max(0,s.lives-1),6);i++){ const lx=6+i*12, ly=CH-8;
+      ctx.fillStyle='#f2c14e'; ctx.beginPath(); ctx.arc(lx,ly,4, 0.28, Math.PI*2-0.28); ctx.closePath(); ctx.fill(); }
+    ctx.textAlign='right'; ctx.fillStyle='#fdf3e7'; ctx.fillText('BAY '+pad(s.bay,2), CW-4, CH-8);
+  }
+  function centerText(txt,color,size,dy){ ctx.save(); ctx.fillStyle=color; ctx.font=(size||10)+'px "Jersey 15", monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(txt, CW/2, OY+MH/2+(dy||0)); ctx.restore(); }
+
+  function draw(){
+    drawBg(); ctx.drawImage(wallBuf,0,0); drawDots(); drawFruit();
+    for(const g of s.ghosts) if(g.state==='home'||g.state==='leaving'||g.state==='entering'||g.state==='eyes') drawGhost(g);
+    for(const g of s.ghosts) if(!(g.state==='home'||g.state==='leaving'||g.state==='entering'||g.state==='eyes')) drawGhost(g);
+    if(s.sub!=='bayclear') drawBotman();
+    drawHud();
+    if(s.sub==='ready'){ centerText('READY', '#f2a03d', 12, 16); }
+    if(s.sub==='bayclear' && Math.floor(s.subT/180)%2===0){ /* flash: draw walls brighter already via buf */ }
+    if(s.phase==='dead'){ centerText('SHIFT OVER', '#e5484d', 12, 0); centerText('TAP TO RETRY', '#fdf3e7', 8, 16); }
+  }
+
+  /* ================= INPUT ================= */
+  let queuedWant=null;
+  function setWant(d){ queuedWant=d; }
+  // d-pad (tap sets a queued direction — continuous slide keeps going)
+  function bindPad(id,d){ const el=document.getElementById(id); if(!el)return;
+    const on=e=>{ e.preventDefault(); el.classList.add('on'); setWant(d); };
+    const off=e=>{ e.preventDefault(); el.classList.remove('on'); };
+    el.addEventListener('pointerdown',on); el.addEventListener('pointerup',off); el.addEventListener('pointercancel',off); el.addEventListener('pointerleave',off); }
+  bindPad('padU',UP); bindPad('padD',DOWN); bindPad('padL',LEFT); bindPad('padR',RIGHT);
+  // centre button repurposed as MUTE (no fire button in BOTMAN)
+  (function(){ const b=document.getElementById('padFire'); if(!b)return; b.textContent='🔊'; b.setAttribute('aria-label','Mute');
+    b.addEventListener('pointerdown',e=>{ e.preventDefault(); muted=!muted; b.textContent=muted?'🔇':'🔊'; try{localStorage.setItem('chmp_mute',muted?'1':'0');}catch(_){}}); })();
+  const KEYS={ArrowUp:UP,ArrowDown:DOWN,ArrowLeft:LEFT,ArrowRight:RIGHT,w:UP,s:DOWN,a:LEFT,d:RIGHT,W:UP,S:DOWN,A:LEFT,D:RIGHT};
+  addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeRules(); return; }
+    if(e.key==='r'||e.key==='R'){ restart(); return; }
+    if(e.key==='m'||e.key==='M'){ muted=!muted; const b=document.getElementById('padFire'); if(b)b.textContent=muted?'🔇':'🔊'; try{localStorage.setItem('chmp_mute',muted?'1':'0');}catch(_){} return; }
+    const d=KEYS[e.key]; if(d){ setWant(d); e.preventDefault(); } });
+  // swipe on the canvas
+  let tsx=0,tsy=0,tsw=false;
+  cv.addEventListener('pointerdown',e=>{ tsw=true; tsx=e.clientX; tsy=e.clientY; });
+  cv.addEventListener('pointerup',e=>{ if(!tsw)return; tsw=false; const dx=e.clientX-tsx, dy=e.clientY-tsy;
+    if(Math.abs(dx)<8 && Math.abs(dy)<8) return;
+    if(Math.abs(dx)>Math.abs(dy)) setWant(dx>0?RIGHT:LEFT); else setWant(dy>0?DOWN:UP); });
+
+  /* ================= ENGINE CONTRACT (Paid layer arms/observes a run) ======= */
+  function startRun(){ s=newRun(); active=true; prevPhase='play'; deadHandled=false; queuedWant=null; rulesO.classList.remove('show'); overO.classList.remove('show'); paidO.classList.remove('show'); }
+  function idleForPaid(){ s=newRun(); active=false; }
+  function resumeFree(){ s=newRun(); active=true; prevPhase='play'; deadHandled=false; queuedWant=null; overO.classList.remove('show'); }
+  window.BOTMANEngine = { start:startRun, idle:idleForPaid, resumeFree:resumeFree, state:()=>s };
+  function endRun(){ active=false;
+    if(s.score>hi){ hi=s.score; try{ localStorage.setItem('chmp_hi',String(hi)); }catch(e){} }
+    const res={ score:s.score, bay:s.bay, timeMs:s.timeMs };
+    if(window.BOTMANPaid && BOTMANPaid.onRunEnd && BOTMANPaid.onRunEnd(res)) return;
+    showOver(); }
+
+  /* ================= LOOP ================= */
+  const STEP=1000/60; let last=performance.now(), acc=0;
+  function handleEv(ev){ if(ev.dot) sChomp(); if(ev.power) sPower(); if(ev.eat) sEat(s.chain); if(ev.die) sDie(); if(ev.bay) sBay(); if(ev.extra) sExtra(); if(ev.fruit) sFruit(); }
+  function frame(now){ let dt=now-last; last=now; if(dt>100)dt=100;
+    if(active && s.phase==='play' && !rulesShown()){
+      acc+=dt; let guard=0;
+      while(acc>=STEP && s.phase==='play' && guard<8){ acc-=STEP; s.player.want=queuedWant; const ev=stepGame(s,STEP); handleEv(ev); guard++; }
+    } else { acc=0; }
+    if(s.phase==='dead' && !deadHandled){ deadHandled=true; endRun(); }
+    prevPhase=s.phase; syncHUD(); draw(); requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // First load: open How-To as an intro (skip Phantom redirect returns). Keeps the 2-inline-script contract.
+  try{ var _p=new URLSearchParams(location.search); if(!_p.get('phantom_action') && _p.get('src')!=='browse') openRules(); }catch(e){}
+})();
+}
+
+</script>
+
+<!-- Shared wallet libs (loaded once; the wallet LOGIC stays dead until Paid is chosen — mirrors live Mr Bot / Rush). -->
+<script src="phantom-deeplink-libs.min.js?v=20260906a"></script>
+<script src="phantom-mobile.js?v=20260906a"></script>
+<script src="solana-web3.iife.min.js?v=20260906a"></script>
+<script>
+  // NOTE: the score-memo SHAPE (buildScoreMemo + the result fields it carries: res.height/res.oil/...) is
+  // per-game — change those to your run stats. Everything else in this layer stays byte-identical.
+/* ============================================================================
+ * Bot Smash — Paid layer. CHMP sink + fun leaderboard.
+ * The wallet MECHANICS below (getProvider, fetchOilBalance, buildTransferIx,
+ * buildMemoIx, confirmSignature, sendPayment, onConnect, resume) are LIFTED
+ * VERBATIM from the live Mr Bot index.html (itself lifted from Bot Merge Rush)
+ * — only CFG values, the CHMP memo tag / pending key / sign marker, and the
+ * score-memo shape change. The UI glue is Bot Smash's (single-run action game).
+ * Bot Smash is real-time and UNREPLAYABLE. The leaderboard is a FUN RANKING +
+ * an OIL SINK. It is NOT verified / provably fair. Records, does not verify.
+ * ==========================================================================*/
+(function(){
+  'use strict';
+  var mode = 'free';
+  function $(id){ return document.getElementById(id); }
+
+  function lockModeToggle(lock){
+    $('modeFree').disabled = !!lock;
+    $('modePaid').disabled = !!lock;
+  }
+
+  var Paid = (function(){
+    var TEST_MODE = true;     // <-- ships TEST for Localnet proof; flip to false ONLY with Founder confirm in this run's output
+    var CFG = TEST_MODE ? {
+      RPC: 'http://127.0.0.1:8899',
+      TOKEN_PROGRAM: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+      MEMO_PROGRAM: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+      OIL_MINT: '9B5ZQifZQc3ykhnZhA9m8DFoNY5uaTwqHGNZMah6eK8Y',
+      TREASURY: '8tzZzNiGkE2kYXhUSauNEUyVHiaWBt5pBagg7CHKPNBM',
+      TREASURY_TOKEN_ACCOUNT: '3s1SQ7JZmti4PfhVsb7LCTn9q5ZhRBMaH6v2vsrVZeg6',
+      ENTRY_FEE: 25, POST_FEE: 1, DECIMALS: 2
+    } : {
+      RPC: 'https://finnbots-rpc.mart-kin1000.workers.dev',
+      TOKEN_PROGRAM: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+      MEMO_PROGRAM: 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',
+      OIL_MINT: 'HrcfXJcFdMoLfbkN5qCTSFrLsAgJNHitmwKc5AyS7xzf',
+      TREASURY: '75WPN3kwYUT5kdPU7V3Fp3LhnxmPC38bsgBCasRQdXMR',
+      TREASURY_TOKEN_ACCOUNT: '2ZBNMLZFfHCuZm9Lfc3b7ut296tRwGtapuXad7zSm1ED',
+      ENTRY_FEE: 25, POST_FEE: 1, DECIMALS: 2
+    };
+    var MEMO_TAG = 'CHMP';
+    var wallet = { pubkey:null, oil:0 };
+    var inited=false, busy=false, entrySig=null, pendingResult=null;
+    var connectBtn, walletStatus;
+
+    function $(id){ return document.getElementById(id); }
+    // ---- verbatim from Rush/Mr Bot ----
+    function getProvider(){ if(window.phantom&&window.phantom.solana&&window.phantom.solana.isPhantom) return window.phantom.solana; if(window.solana&&window.solana.isPhantom) return window.solana; return null; }
+    function shortAddr(a){ return a.slice(0,4)+'\u2026'+a.slice(-4); }
+    function setStatus(html,cls){ walletStatus.classList.remove('hidden'); walletStatus.className='wallet-status'+(cls?' '+cls:''); walletStatus.innerHTML=html; }
+    function canPlay(){ return !!wallet.pubkey && wallet.oil>=CFG.ENTRY_FEE; }
+    function delay(ms){ return new Promise(function(res){ setTimeout(res,ms); }); }
+
+    // ---- balance (verbatim from Rush/Mr Bot) -------------------------------
+    async function fetchOilBalance(owner){
+      try{ var body=JSON.stringify({ jsonrpc:'2.0', id:'oilbal', method:'getTokenAccountsByOwner', params:[ owner, { mint:CFG.OIL_MINT }, { encoding:'jsonParsed' } ] });
+        var r=await fetch(CFG.RPC,{ method:'POST', headers:{'Content-Type':'application/json'}, body:body }); if(!r.ok) return 0;
+        var j=await r.json(); var accts=j&&j.result&&j.result.value; if(!accts||!accts.length) return 0;
+        var base=0; accts.forEach(function(acc){ try{ base+=Number(acc.account.data.parsed.info.tokenAmount.amount); }catch(e){} });
+        return base/Math.pow(10,CFG.DECIMALS);
+      }catch(e){ return 0; }
+    }
+    async function checkBalance(owner){
+      wallet.oil=await fetchOilBalance(owner);
+      var pfx=TEST_MODE?'\ud83e\uddea TEST MODE \u2014 ':'';
+      if(wallet.oil>=CFG.ENTRY_FEE){ setStatus('Connected as <span class="addr">'+shortAddr(owner)+'</span><br/>'+pfx+'You hold <b>'+wallet.oil.toFixed(2)+'</b> $OIL \u2014 tap Play to enter (25 OIL).', 'ok'); }
+      else { setStatus('Connected as <span class="addr">'+shortAddr(owner)+'</span><br/>'+pfx+'This wallet holds <b>'+wallet.oil.toFixed(2)+'</b> $OIL \u2014 need at least '+CFG.ENTRY_FEE+' to play.', 'warn'); }
+      relabelStart();
+    }
+
+    // ---- payment (one signed SPL transfer + memo — verbatim from Rush/Mr Bot) ----
+    var PENDING_KEY='chmp_pending_action';
+    function savePending(a){ try{ localStorage.setItem(PENDING_KEY, JSON.stringify(a)); }catch(e){} }
+    function loadPending(){ try{ var v=localStorage.getItem(PENDING_KEY); return v?JSON.parse(v):null; }catch(e){ return null; } }
+    function clearPending(){ try{ localStorage.removeItem(PENDING_KEY); }catch(e){} }
+    function PayError(msg){ this.userMessage=msg; }
+    function u64LE(amount){ var out=new Uint8Array(8); var big=BigInt(Math.round(amount)); for(var i=0;i<8;i++){ out[i]=Number(big&0xffn); big>>=8n; } return out; }
+    function buildTransferIx(src,dst,owner,amt){ var data=new Uint8Array(9); data[0]=3; data.set(u64LE(amt),1);
+      return new solanaWeb3.TransactionInstruction({ programId:new solanaWeb3.PublicKey(CFG.TOKEN_PROGRAM),
+        keys:[{pubkey:src,isSigner:false,isWritable:true},{pubkey:dst,isSigner:false,isWritable:true},{pubkey:owner,isSigner:true,isWritable:false}], data:data }); }
+    function buildMemoIx(owner,text){ return new solanaWeb3.TransactionInstruction({ programId:new solanaWeb3.PublicKey(CFG.MEMO_PROGRAM), keys:[{pubkey:owner,isSigner:true,isWritable:false}], data:new TextEncoder().encode(text) }); }
+    async function confirmSignature(connection,signature,timeoutMs){ var start=Date.now();
+      while(Date.now()-start<timeoutMs){ var res=await connection.getSignatureStatuses([signature]); var st=res&&res.value&&res.value[0];
+        if(st){ if(st.err) throw new PayError('The transaction failed on-chain \u2014 no charge was made. Please try again.'); if(st.confirmationStatus==='confirmed'||st.confirmationStatus==='finalized') return true; } await delay(1500); } return false; }
+
+    async function sendPayment(amountOil, memoText, action){
+      var provider=getProvider();
+      var useMobile=!provider && window.PhantomMobile && PhantomMobile.isMobile() && PhantomMobile.hasSession();
+      if(!provider && !useMobile) throw new PayError('Phantom isn\u2019t reachable here \u2014 open this page in your browser, or tap Connect again on mobile.');
+      var ownerPk=new solanaWeb3.PublicKey(wallet.pubkey);
+      var connection=new solanaWeb3.Connection(CFG.RPC,'confirmed');
+      var tokAccts=await connection.getTokenAccountsByOwner(ownerPk,{ mint:new solanaWeb3.PublicKey(CFG.OIL_MINT) });
+      if(!tokAccts.value.length) throw new PayError('No $OIL account found in this wallet.');
+      var sourcePubkey=tokAccts.value[0].pubkey;
+      var balInfo=await connection.getTokenAccountBalance(sourcePubkey);
+      var needBase=Math.round(amountOil*Math.pow(10,CFG.DECIMALS));
+      if(Number(balInfo.value.amount)<needBase) throw new PayError('Not enough liquid $OIL \u2014 need '+amountOil+'.');
+      var destPubkey=new solanaWeb3.PublicKey(CFG.TREASURY_TOKEN_ACCOUNT);
+      var tx=new solanaWeb3.Transaction();
+      tx.add(buildTransferIx(sourcePubkey,destPubkey,ownerPk,needBase), buildMemoIx(ownerPk,memoText));
+      tx.feePayer=ownerPk; var latest=await connection.getLatestBlockhash(); tx.recentBlockhash=latest.blockhash;
+      if(useMobile){
+        var pend={ action:action, owner:wallet.pubkey, marker:'chmp_sign' };
+        if(action==='score' && pendingResult){ pend.entrySig=entrySig; pend.score=pendingResult.score; pend.bay=pendingResult.bay; pend.timeMs=pendingResult.timeMs; }
+        savePending(pend); setStatus('Opening Phantom to approve\u2026');
+        var unsigned=tx.serialize({ requireAllSignatures:false, verifySignatures:false });
+        PhantomMobile.signTransaction(unsigned, window.location.origin+window.location.pathname, 'chmp_sign'); return null;
+      }
+      var signed=await provider.signTransaction(tx); setStatus('Sending payment\u2026');
+      var rawSig=await connection.sendRawTransaction(signed.serialize(),{ skipPreflight:false }); setStatus('Payment sent \u2014 waiting for confirmation\u2026');
+      var ok=await confirmSignature(connection,rawSig,30000); if(!ok) throw new PayError('Confirmation is taking longer than expected. Signature: '+rawSig+'. Do not pay again \u2014 check it first.');
+      return rawSig; // base58 on-chain signature
+    }
+
+    // ---- score memo (CHMP — no seed, no move-log, no replay; records NOT verified) ----
+    function buildScoreMemo(res){ return MEMO_TAG+'|score|sig='+String(entrySig).slice(0,32)+'|score='+res.score+'|bay='+res.bay+'|time='+res.timeMs; }
+
+    // ---- flow glue (Bot Smash: single-run action game) ---------------------
+    function relabelStart(){
+      var b=$('paidPlayBtn'); if(!b) return;
+      b.textContent = canPlay() ? 'Play (25 OIL)' : (wallet.pubkey ? 'Need 25 OIL to play' : 'Connect wallet first');
+    }
+    function relabelStartBusy(t){ var b=$('paidPlayBtn'); if(b) b.textContent=t; }
+
+    function onEntryConfirmed(sig){ entrySig=sig; busy=false; lockModeToggle(true);
+      setStatus('Entry paid \u2014 good luck! Post your score after the run.', 'ok');
+      window.BOTMANEngine.start(); }
+
+    // Called by the engine at game over. Returns true if this was a paid run (engine then skips its free overlay).
+    function onRunEnd(res){
+      if(mode!=='paid' || !entrySig) return false;
+      pendingResult={ score:res.score, bay:res.bay, timeMs:res.timeMs };
+      showRunOver(pendingResult); return true;
+    }
+    function fmtTime(ms){ var s=Math.round(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+    function showRunOver(res){
+      setStatus('Run over \u2014 post your score below to record it (1 OIL).', 'ok'); relabelStart();
+      var ov=$('paidOverlay'); ov.classList.add('show');
+      ov.innerHTML='<div class="card win"><h2>SHIFT OVER</h2><p>Bay <b>'+res.bay+'</b> \u00b7 Score <b>'+res.score+'</b> \u00b7 Time <b>'+fmtTime(res.timeMs)+'</b><br/>Post it to the leaderboard (1 OIL) \u2014 a fun ranking, not verified.</p>'+
+        '<button class="btn" id="postBtn">Post score (1 OIL)</button></div>';
+      $('postBtn').addEventListener('click', onPost, { once:false });
+    }
+    async function onPost(){
+      if(busy || !pendingResult) return;
+      busy=true; var pb=$('postBtn'); if(pb){ pb.disabled=true; pb.textContent='Posting\u2026'; }
+      var memo=buildScoreMemo(pendingResult);
+      try{ var sig=await sendPayment(CFG.POST_FEE, memo, 'score'); if(sig===null) return; showPosted(pendingResult); }
+      catch(e){ setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey||'')+'</span><br/>'+((e instanceof PayError)?e.userMessage:'Your score post didn\u2019t confirm. Nothing recorded yet \u2014 tap to retry.'), 'warn');
+        if(pb){ pb.disabled=false; pb.textContent='Retry post'; } busy=false; }
+    }
+    function showPosted(res){ pendingResult=null; entrySig=null; busy=false; lockModeToggle(false);
+      $('posted-text').innerHTML='Bay <b>'+res.bay+'</b> \u00b7 Score <b>'+res.score+'</b> \u00b7 Time <b>'+fmtTime(res.timeMs)+'</b>. It\u2019ll appear on the leaderboard once recorded on-chain \u2014 a fun ranking, not verified.';
+      $('paidOverlay').classList.remove('show');
+      $('postedSheet').classList.add('show');
+    }
+
+    // Paid start card (idle state before entry) — mirrors Mr Bot's resetToPlay.
+    function showPaidStart(){
+      entrySig=null; pendingResult=null; busy=false; lockModeToggle(false);
+      var ov=$('paidOverlay'); ov.classList.add('show');
+      ov.innerHTML='<div class="card"><h2>BOTMAN \u2014 PAID</h2><p>25 OIL entry \u00b7 one run (3 lives, no continues) \u00b7 fun leaderboard, not verified. Clear the maze of Beads, dodge the four hunters, grab a Power Bead and eat them back \u2014 holders \u00d71.5.</p>'+
+        '<button class="btn" id="paidPlayBtn">Play (25 OIL)</button></div>';
+      $('paidPlayBtn').addEventListener('click', function(){ handleStart(); });
+      relabelStart();
+      if(wallet.pubkey) checkBalance(wallet.pubkey);
+    }
+
+    // ---- connect (desktop + mobile — verbatim from Rush/Mr Bot) ------------
+    async function onConnect(){
+      var provider=getProvider();
+      if(!provider){
+        if(window.PhantomMobile && PhantomMobile.isMobile()){
+          var inBrowse=new URLSearchParams(window.location.search).get('src')==='browse';
+          if(!inBrowse){ connectBtn.disabled=true; connectBtn.textContent='Opening in Phantom\u2026'; setStatus('Opening this game inside Phantom\u2019s browser.');
+            var target=window.location.origin+window.location.pathname+'?src=browse';
+            window.location.href='https://phantom.app/ul/browse/'+encodeURIComponent(target)+'?ref='+encodeURIComponent(window.location.origin); return; }
+          connectBtn.disabled=true; connectBtn.textContent='Opening Phantom\u2026'; setStatus('Opening Phantom \u2014 approve, then you\u2019ll come back here.');
+          PhantomMobile.connect(window.location.origin+window.location.pathname); return;
+        }
+        setStatus('Phantom isn\u2019t reachable here. Open this page in a browser with the <a href="https://phantom.app" target="_blank" rel="noopener">Phantom</a> extension.', 'warn'); return;
+      }
+      connectBtn.disabled=true; connectBtn.textContent='Connecting\u2026';
+      try{ var resp=await provider.connect(); wallet.pubkey=resp.publicKey.toString(); connectBtn.textContent='Connected';
+        setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026'); checkBalance(wallet.pubkey);
+      }catch(e){ connectBtn.disabled=false; connectBtn.textContent='Connect'; setStatus('Connection cancelled. Tap Connect to try again.', 'warn'); }
+    }
+
+    // ---- play (25 OIL entry) -----------------------------------------------
+    async function onPlay(){
+      if(busy || entrySig) return;
+      if(!canPlay()){ setStatus('Connect a wallet holding at least '+CFG.ENTRY_FEE+' $OIL to play.', 'warn'); return; }
+      busy=true; relabelStartBusy('Sending entry\u2026');
+      try{ var sig=await sendPayment(CFG.ENTRY_FEE, MEMO_TAG+'|entry', 'entry'); if(sig===null) return; onEntryConfirmed(sig); }
+      catch(e){ setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey||'')+'</span><br/>'+((e instanceof PayError)?e.userMessage:'Something went wrong sending the entry. No confirmed charge means nothing was taken.'), 'warn');
+        busy=false; relabelStart(); }
+    }
+
+    // handleStart is the entry gate reused by the Paid start card's Play button.
+    function handleStart(){
+      if(mode!=='paid') return false;      // Free: engine runs as normal
+      if(busy || entrySig) return true;    // in-flight or a paid run already armed: block
+      if(!wallet.pubkey){ setStatus('Connect a wallet with at least '+CFG.ENTRY_FEE+' $OIL, then tap Play.', 'warn'); return true; }
+      onPlay(); return true;
+    }
+
+    function onAgain(){ $('postedSheet').classList.remove('show'); window.BOTMANEngine.idle(); showPaidStart(); }
+
+    // ---- mobile redirect resume (verbatim from Rush/Mr Bot; carries waves/score/timeMs) --
+    async function resume(){
+      var actionParam=new URLSearchParams(window.location.search).get('phantom_action');
+      if(!actionParam){
+        if(!wallet.pubkey && window.PhantomMobile && PhantomMobile.hasSession()){ wallet.pubkey=PhantomMobile.getSessionPublicKey();
+          connectBtn.textContent='Connected'; connectBtn.disabled=true; setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026'); checkBalance(wallet.pubkey); }
+        return;
+      }
+      connectBtn.disabled=true; connectBtn.textContent='Finishing\u2026'; setStatus('Almost there \u2014 finishing up with Phantom\u2026');
+      var pending=loadPending(); var marker=pending?pending.marker:'chmp_sign';
+      var result=window.PhantomMobile?PhantomMobile.consumePendingRedirect(marker):null;
+      if(result&&result.type==='connect'){ wallet.pubkey=result.publicKey; connectBtn.textContent='Connected';
+        setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey)+'</span><br/>Checking your $OIL balance\u2026'); checkBalance(wallet.pubkey); return; }
+      if(result&&result.type==='signTransaction'&&pending){ connectBtn.textContent='Connected'; connectBtn.disabled=true; if(pending.owner) wallet.pubkey=pending.owner; clearPending();
+        try{ var connection=new solanaWeb3.Connection(CFG.RPC,'confirmed'); var rawSig=await connection.sendRawTransaction(result.txBytes,{ skipPreflight:false });
+          setStatus('Payment sent \u2014 waiting for confirmation\u2026'); var ok=await confirmSignature(connection,rawSig,30000);
+          if(!ok) throw new PayError('Confirmation slow. Signature: '+rawSig+'. Do not pay again \u2014 check it first.');
+          if(pending.action==='entry'){ onEntryConfirmed(rawSig); }
+          else if(pending.action==='score'){ pendingResult={ score:pending.score, bay:pending.bay, timeMs:pending.timeMs }; showPosted(pendingResult); }
+          if(wallet.pubkey) checkBalance(wallet.pubkey);
+        }catch(e){ setStatus('Connected as <span class="addr">'+shortAddr(wallet.pubkey||'')+'</span><br/>'+((e instanceof PayError)?e.userMessage:'Something went wrong after returning from Phantom. Check your wallet activity before retrying.'), 'warn'); }
+        return;
+      }
+      connectBtn.disabled=false; connectBtn.textContent='Connect';
+      setStatus((result&&result.type==='error')?result.message:'The connection didn\u2019t complete \u2014 tap Connect to try again.', 'warn');
+    }
+
+    function init(){
+      if(inited) return; inited=true;
+      connectBtn=$('connectBtn'); walletStatus=$('walletStatus');
+      if(TEST_MODE){ $('testBanner').classList.remove('hidden'); }
+      connectBtn.addEventListener('click', onConnect);
+      $('againBtn').addEventListener('click', onAgain);
+    }
+
+    return { init:init, resume:resume, onRunEnd:onRunEnd, handleStart:handleStart,
+             showPaidStart:showPaidStart, hasSession:function(){ return window.PhantomMobile && PhantomMobile.hasSession(); } };
+  })();
+
+  window.BOTMANPaid = Paid;
+
+  // ===== Mode switching (kid-safety: Paid is a deliberate opt-in) ============
+  var facts=$('facts');
+  var confirmSheet=$('confirmSheet');
+  var FREE_FACTS='Free \u00b7 wallet-free \u00b7 pays nothing';
+  var PAID_FACTS='Paid \u00b7 25 OIL entry \u00b7 one run \u00b7 fun leaderboard (not verified) \u00b7 holders \u00d71.5';
+
+  function setMode(m){
+    mode=m;
+    var f=$('modeFree'), p=$('modePaid');
+    if(m==='free'){
+      document.body.classList.remove('mode-paid');
+      f.classList.add('active'); p.classList.remove('active');
+      if(facts) facts.textContent=FREE_FACTS;
+    } else {
+      document.body.classList.add('mode-paid');
+      p.classList.add('active'); f.classList.remove('active');
+      if(facts) facts.textContent=PAID_FACTS;
+    }
+  }
+
+  $('modeFree').addEventListener('click', function(){ if(mode==='free') return; setMode('free'); window.BOTMANEngine.resumeFree(); });
+  $('modePaid').addEventListener('click', function(){ if(mode==='paid') return; confirmSheet.classList.add('show'); });
+  $('confirmBack').addEventListener('click', function(){ confirmSheet.classList.remove('show'); });
+  $('confirmEnter').addEventListener('click', function(){ confirmSheet.classList.remove('show'); setMode('paid'); Paid.init(); window.BOTMANEngine.idle(); Paid.showPaidStart(); if(Paid.hasSession && Paid.hasSession()) Paid.resume(); });
+
+  // ===== On load: Free by default. The wallet layer is only touched when returning
+  // ===== from a Phantom redirect or already inside Phantom's browser (both of which
+  // ===== can ONLY occur after the user opted into Paid). =====================
+  (function boot(){
+    var params=new URLSearchParams(window.location.search);
+    if(params.get('phantom_action') || params.get('src')==='browse'){ setMode('paid'); Paid.init(); window.BOTMANEngine.idle(); Paid.showPaidStart(); Paid.resume(); }
+    else { setMode('free'); }
+  })();
+})();
+</script>
+</body>
+</html>
