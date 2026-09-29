@@ -816,7 +816,16 @@ if(!HEADLESS){
 (function(){
   const OY=24, MW=W*TS, MH=H*TS, CW=MW, CH=MH+OY+16;          // canvas 224 x 288
   const cv=document.getElementById('game'), ctx=cv.getContext('2d');
-  cv.width=CW; cv.height=CH; cv.style.aspectRatio=CW+'/'+CH;
+  /* SUPERSAMPLED BACKING STORE (2026-09-25). The canvas used to be backed at the
+     game's own CW x CH and stretched by CSS to 3-4x, so every fillText was a tiny
+     bitmap font resampled — the blur the Founder reported. Backing it at K x and
+     scaling the context by K means ALL existing draw code still works in game
+     units, the pixel art lands on integer device pixels (K is an integer, so no
+     anti-aliasing), and text is rendered with K times the pixels. fitCanvas only
+     ever touches cv.style, so the CSS size is unaffected. */
+  const SS=3;
+  cv.width=CW*SS; cv.height=CH*SS; cv.style.aspectRatio=CW+'/'+CH;
+  ctx.setTransform(SS,0,0,SS,0,0); ctx.imageSmoothingEnabled=false;
   ctx.imageSmoothingEnabled=false;
   const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let s=newRun(), active=true, prevPhase='play', deadHandled=false;
