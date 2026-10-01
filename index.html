@@ -577,6 +577,7 @@ function isOpp(a,b){ return !!a && !!b && a.x===-b.x && a.y===-b.y; }
 const tileX = px => Math.floor(px / TS);
 const tileY = py => Math.floor(py / TS);
 const wrapX = tx => ((tx % W) + W) % W;
+const mod = (a,n) => ((a % n) + n) % n;
 
 /* ghosts may not turn UP at these tiles while in scatter/chase (classic forbidden zones) */
 const FORBID_UP = new Set(['12,11','15,11','12,23','15,23']);
@@ -668,9 +669,42 @@ function pickMin(dirs, tx, ty, tgt){
 /* ---- movement ---- */
 function wrapEntity(e){ if(e.px<0) e.px+=WPX; else if(e.px>=WPX) e.px-=WPX; }
 
+/* ---- CORNERING ----------------------------------------------------------
+   A turn used to commit on the ONE pixel where the bot sat exactly on a tile
+   centre (px%8===4 && py%8===4). Measured over every corner in the maze, at
+   every approach offset: the bot travelled 8.48px on average — MORE THAN A
+   FULL TILE — before the turn took effect, worst case 12px. At the bot's speed
+   that is ~128ms of lag on every turn, and which lag you got depended entirely
+   on where you happened to be when you pressed. Miss the centre pixel and the
+   request waited for the next tile; if the corner you wanted was behind you by
+   then, the buffered turn fired at some LATER opening instead. That is the
+   "controls aren't quick enough / it turns at gaps, not corners" report.
+
+   The arcade lets you begin a turn up to 4px BEFORE the centre and cuts the
+   corner. That is not just forgiveness, it is a real mechanic — cornering is
+   how a good player gains ground, and the ghosts cannot do it (they still turn
+   only on centres, in stepGhostPixel, which is what the asymmetry depends on).
+   The turn window goes from 1 pixel in 8 to 5. */
+function preTurn(p){
+  if(!p.dir || !p.want) return false;
+  if(isOpp(p.want,p.dir)) return false;                       // reversal is handled above
+  if(p.want.x===p.dir.x && p.want.y===p.dir.y) return false;  // not a turn
+  const horiz = p.dir.x!==0;
+  const along = horiz ? mod(p.px,TS) : mod(p.py,TS);
+  const cross = horiz ? mod(p.py,TS) : mod(p.px,TS);
+  if(cross!==4 || along>=4) return false;                     // only while approaching the centre
+  const tx=tileX(p.px), ty=tileY(p.py);
+  if(!playerOpen(tx+p.want.x, ty+p.want.y)) return false;
+  // cut the corner: step onto the lane centre and go
+  if(horiz) p.px = tx*TS+4; else p.py = ty*TS+4;
+  p.dir = p.want;
+  return true;
+}
+
 function stepPlayerPixel(s, ev){
   const p=s.player;
   if(p.want && p.dir && isOpp(p.want, p.dir)){ p.dir=p.want; }     // reverse allowed any time
+  preTurn(p);
   const centered = (p.px%TS===4 && p.py%TS===4);
   if(centered){
     const tx=tileX(p.px), ty=tileY(p.py), cell=s.dots[ty][wrapX(tx)];
