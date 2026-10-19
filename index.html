@@ -3007,31 +3007,33 @@ if(!HEADLESS){
 /* ==========================================================================
    FinnBots ANALYTICS LAYER — how the games are PLAYED, counted, never who plays.
    Founder, 2026-10-19: approved the four-phase analytics plan ("FinnBots
-   Analytics Plan" doc) — "Also keep this all free".
+   Analytics Plan" doc) — "Also keep this all free", and: "Ensure that this
+   reporting layer does not affect anything else cloud flare supports for
+   finnbots or cost me anything the data doesnt have to be realtime".
 
    SOURCE OF TRUTH. Injected by apply-analytics.js as <script id="fb-analytics">
    just before </body>, beside the Cloudflare beacon tag (page views come from
-   the beacon; this layer adds what the beacon cannot see). Entirely passive:
+   the beacon, which is not a Worker and spends nothing of ours; this layer adds
+   what the beacon cannot see). Entirely passive:
 
      - it NEVER touches the engine, the wallet layer or a wallet
      - it watches the run-over card (#overOverlay) and the paid panel
        (#paidOverlay) — the same elements the stickiness layer reads
-     - it stores NOTHING on the device: no cookie, no localStorage, no ID
+     - no cookie, no ID: what it keeps on the device is a handful of COUNTS
+       for this game, and the date it last sent them
 
-   What it sends, at most once each time the page is hidden or closed, and
-   only if something happened: the device class (phone / tablet / laptop),
-   whether the player touched the game at all, how many runs ended and how
-   many times the paid panel opened — plus, once per page, whether this visit
-   finished a run and whether it opened the paid panel (the dashboard funnel
-   counts VISITS at every step; run totals alone cannot say how many players
-   got that far). The game is NOT in the payload — the
-   Worker reads it from the Origin header, so a payload cannot claim to be
-   another game. Free players are children: counts, never people.
-
-   FREE-PLAN BUDGET: every beacon is one Worker request, and the Workers free
-   allowance (100,000 a day) is SHARED with the RPC Worker paid entries need.
-   So: one request per page-hide, nothing on a quiet session, nothing off the
-   live domain (local playtests and gates never send).
+   AT MOST ONE REQUEST PER DEVICE PER DAY. Every request to the events Worker
+   spends the account's FREE Workers allowance (100,000 a day), and that
+   allowance is SHARED with the RPC Worker every paid entry needs. Real time is
+   not wanted, so counts pile up on the device and leave once a day, on the
+   first page-hide of a new UTC day (or the first one ever). What is sent: the
+   device class (phone / tablet / laptop) and, since the last send, how many
+   visits there were, how many touched the game, how many runs ended, how many
+   times the paid panel opened, and how many visits finished a run / opened the
+   paid panel. The game is NOT in the payload — the Worker reads it from the
+   Origin header, so a payload cannot claim to be another game. Nothing is sent
+   off the live domain (local playtests and gates never send). If the browser
+   will not store anything (private mode), it sends at most once per page.
    ========================================================================== */
 (function(){
   try{
@@ -3040,6 +3042,9 @@ if(!HEADLESS){
     if(!/\.finnstergram\.com$/.test(host)) return;           // live games only
     if(!navigator.sendBeacon) return;
     var $ = function(id){ return document.getElementById(id); };
+    var KEY = 'fb:' + host.split('.')[0] + ':counts';
+    var ZERO = function(){ return { n:0, s:0, r:0, p:0, f:0, q:0 }; };
+    var day = function(){ return new Date().toISOString().slice(0, 10); };
 
     var dev = (function(){
       var coarse = false;
@@ -3049,15 +3054,16 @@ if(!HEADLESS){
       return (s && s < 600) ? 'phone' : 'tablet';
     })();
 
-    var c = { s:0, r:0, p:0, f:0, q:0 }, sent = { s:0, r:0, p:0, f:0, q:0 }, opened = false;
+    /* this visit, as it happens */
+    var v = { s:0, r:0, p:0, f:0, q:0 }, banked = { s:0, r:0, p:0, f:0, q:0 }, visitBanked = false, sentThisPage = false;
 
     /* 1. played: the first input that is not on the page's own chrome */
     var chrome = function(t){
       return !!(t && t.closest && t.closest('button, a, input, select, textarea, summary, .overlay, .sheet, .topbar'));
     };
     var dialog = function(){ return !!document.querySelector('.overlay.show, .sheet.show'); };
-    addEventListener('keydown', function(){ if(!c.s && !dialog()) c.s = 1; }, true);
-    addEventListener('pointerdown', function(e){ if(!c.s && !chrome(e && e.target)) c.s = 1; }, true);
+    addEventListener('keydown', function(){ if(!v.s && !dialog()) v.s = 1; }, true);
+    addEventListener('pointerdown', function(e){ if(!v.s && !chrome(e && e.target)) v.s = 1; }, true);
 
     /* 2. a run ended, 3. the paid panel opened — each a rising edge of .show */
     function edge(el, fn){
@@ -3069,21 +3075,43 @@ if(!HEADLESS){
         on = now;
       }).observe(el, { attributes:true, attributeFilter:['class'] });
     }
-    edge($('overOverlay'), function(){ c.r++; c.s = 1; c.f = 1; });
-    edge($('paidOverlay'), function(){ c.p++; c.q = 1; });
+    edge($('overOverlay'), function(){ v.r++; v.s = 1; v.f = 1; });
+    edge($('paidOverlay'), function(){ v.p++; v.q = 1; });
 
-    /* send the change since the last send; the first send also counts the session */
+    /* the device's pile of unsent counts */
+    var store = null;
+    function load(){
+      try{ var o = JSON.parse(localStorage.getItem(KEY) || 'null');
+           if(o && o.c && typeof o.c.r === 'number') return o; }catch(e){}
+      return { sent:'', c:ZERO() };
+    }
+    function save(o){ try{ localStorage.setItem(KEY, JSON.stringify(o)); return localStorage.getItem(KEY) !== null; }catch(e){ return false; } }
+
+    /* bank what this visit added since the last bank, then send the pile if today has not had a send */
     function flush(){
-      var d = { s:c.s - sent.s, r:c.r - sent.r, p:c.p - sent.p, f:c.f - sent.f, q:c.q - sent.q };
-      if(!d.s && !d.r && !d.p) return;
-      var body = JSON.stringify({ v:1, d:dev, n:opened ? 0 : 1, s:d.s, r:d.r, p:d.p, f:d.f, q:d.q });
-      if(navigator.sendBeacon(END, body)){ sent = { s:c.s, r:c.r, p:c.p, f:c.f, q:c.q }; opened = true; }
+      var d = { s:v.s - banked.s, r:v.r - banked.r, p:v.p - banked.p, f:v.f - banked.f, q:v.q - banked.q };
+      var any = d.s || d.r || d.p;
+      store = load();
+      if(any){
+        if(!visitBanked){ store.c.n++; visitBanked = true; }
+        store.c.s += d.s; store.c.r += d.r; store.c.p += d.p; store.c.f += d.f; store.c.q += d.q;
+        banked = { s:v.s, r:v.r, p:v.p, f:v.f, q:v.q };
+      }
+      var kept = save(store);
+      var c = store.c;
+      if(!(c.s || c.r || c.p)) return;
+      if(kept ? store.sent === day() : sentThisPage) return;   // already sent today (or, unstored, this page)
+      var body = JSON.stringify({ v:2, d:dev, n:c.n, s:c.s, r:c.r, p:c.p, f:c.f, q:c.q });
+      if(navigator.sendBeacon(END, body)){
+        sentThisPage = true;
+        store.sent = day(); store.c = ZERO(); save(store);
+      }
     }
     document.addEventListener('visibilitychange', function(){
       if(document.visibilityState === 'hidden') flush();
     });
     addEventListener('pagehide', flush);
-    window.FB_ANALYTICS_STATE = function(){ return { dev:dev, counted:{ s:c.s, r:c.r, p:c.p, f:c.f, q:c.q }, sent:{ s:sent.s, r:sent.r, p:sent.p, f:sent.f, q:sent.q } }; };
+    window.FB_ANALYTICS_STATE = function(){ return { dev:dev, visit:{ s:v.s, r:v.r, p:v.p, f:v.f, q:v.q }, store:load() }; };
   }catch(e){ /* analytics must never break a game */ }
 })();
 </script>
