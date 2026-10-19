@@ -2,7 +2,7 @@
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" id="fb-csp" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://arweave.net https://*.arweave.net; connect-src 'self' https://finnbots-rpc.mart-kin1000.workers.dev http://127.0.0.1:8899; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" id="fb-csp" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://arweave.net https://*.arweave.net; connect-src 'self' https://finnbots-rpc.mart-kin1000.workers.dev http://127.0.0.1:8899 https://cloudflareinsights.com https://finnbots-events.mart-kin1000.workers.dev; media-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-src 'none'; manifest-src 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>BOTMAN — a FinnBots game</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3000,6 +3000,91 @@ if(!HEADLESS){
                counting:box.classList.contains('fb-outro-counting') };
     };
   }catch(e){ /* an ending screen must never break a game */ }
+})();
+</script>
+<script defer id="fb-beacon" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "b11bf18cfe07453484c01ca2d417e772"}'></script>
+<script id="fb-analytics">
+/* ==========================================================================
+   FinnBots ANALYTICS LAYER — how the games are PLAYED, counted, never who plays.
+   Founder, 2026-10-19: approved the four-phase analytics plan ("FinnBots
+   Analytics Plan" doc) — "Also keep this all free".
+
+   SOURCE OF TRUTH. Injected by apply-analytics.js as <script id="fb-analytics">
+   just before </body>, beside the Cloudflare beacon tag (page views come from
+   the beacon; this layer adds what the beacon cannot see). Entirely passive:
+
+     - it NEVER touches the engine, the wallet layer or a wallet
+     - it watches the run-over card (#overOverlay) and the paid panel
+       (#paidOverlay) — the same elements the stickiness layer reads
+     - it stores NOTHING on the device: no cookie, no localStorage, no ID
+
+   What it sends, at most once each time the page is hidden or closed, and
+   only if something happened: the device class (phone / tablet / laptop),
+   whether the player touched the game at all, how many runs ended and how
+   many times the paid panel opened — plus, once per page, whether this visit
+   finished a run and whether it opened the paid panel (the dashboard funnel
+   counts VISITS at every step; run totals alone cannot say how many players
+   got that far). The game is NOT in the payload — the
+   Worker reads it from the Origin header, so a payload cannot claim to be
+   another game. Free players are children: counts, never people.
+
+   FREE-PLAN BUDGET: every beacon is one Worker request, and the Workers free
+   allowance (100,000 a day) is SHARED with the RPC Worker paid entries need.
+   So: one request per page-hide, nothing on a quiet session, nothing off the
+   live domain (local playtests and gates never send).
+   ========================================================================== */
+(function(){
+  try{
+    var END = 'https://finnbots-events.mart-kin1000.workers.dev/e';
+    var host = String(location.hostname || '');
+    if(!/\.finnstergram\.com$/.test(host)) return;           // live games only
+    if(!navigator.sendBeacon) return;
+    var $ = function(id){ return document.getElementById(id); };
+
+    var dev = (function(){
+      var coarse = false;
+      try{ coarse = matchMedia('(pointer: coarse)').matches; }catch(e){}
+      if(!coarse) return 'laptop';
+      var s = (typeof screen !== 'undefined') ? Math.min(screen.width || 0, screen.height || 0) : 0;
+      return (s && s < 600) ? 'phone' : 'tablet';
+    })();
+
+    var c = { s:0, r:0, p:0, f:0, q:0 }, sent = { s:0, r:0, p:0, f:0, q:0 }, opened = false;
+
+    /* 1. played: the first input that is not on the page's own chrome */
+    var chrome = function(t){
+      return !!(t && t.closest && t.closest('button, a, input, select, textarea, summary, .overlay, .sheet, .topbar'));
+    };
+    var dialog = function(){ return !!document.querySelector('.overlay.show, .sheet.show'); };
+    addEventListener('keydown', function(){ if(!c.s && !dialog()) c.s = 1; }, true);
+    addEventListener('pointerdown', function(e){ if(!c.s && !chrome(e && e.target)) c.s = 1; }, true);
+
+    /* 2. a run ended, 3. the paid panel opened — each a rising edge of .show */
+    function edge(el, fn){
+      if(!el) return;
+      var on = el.classList.contains('show');
+      new MutationObserver(function(){
+        var now = el.classList.contains('show');
+        if(now && !on) fn();
+        on = now;
+      }).observe(el, { attributes:true, attributeFilter:['class'] });
+    }
+    edge($('overOverlay'), function(){ c.r++; c.s = 1; c.f = 1; });
+    edge($('paidOverlay'), function(){ c.p++; c.q = 1; });
+
+    /* send the change since the last send; the first send also counts the session */
+    function flush(){
+      var d = { s:c.s - sent.s, r:c.r - sent.r, p:c.p - sent.p, f:c.f - sent.f, q:c.q - sent.q };
+      if(!d.s && !d.r && !d.p) return;
+      var body = JSON.stringify({ v:1, d:dev, n:opened ? 0 : 1, s:d.s, r:d.r, p:d.p, f:d.f, q:d.q });
+      if(navigator.sendBeacon(END, body)){ sent = { s:c.s, r:c.r, p:c.p, f:c.f, q:c.q }; opened = true; }
+    }
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'hidden') flush();
+    });
+    addEventListener('pagehide', flush);
+    window.FB_ANALYTICS_STATE = function(){ return { dev:dev, counted:{ s:c.s, r:c.r, p:c.p, f:c.f, q:c.q }, sent:{ s:sent.s, r:sent.r, p:sent.p, f:sent.f, q:sent.q } }; };
+  }catch(e){ /* analytics must never break a game */ }
 })();
 </script>
 </body>
