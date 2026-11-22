@@ -545,7 +545,7 @@ canvas{ touch-action:none; }
       '<span class="fb-seed-day">' +
         (rng && !FB.daily ? 'random' : FB.dayKey()) + '</span>' +
       (rng ? '<button class="fb-seed-btn" type="button">' +
-             (FB.daily ? 'Practise' : 'Back to today') + '</button>' : '');
+             (FB.daily ? 'Practice' : 'Back to today') + '</button>' : '');
     var btn = box.querySelector('.fb-seed-btn');
     if (btn) btn.addEventListener('click', function(){
       FB.practice(FB.daily);
@@ -586,7 +586,19 @@ canvas{ touch-action:none; }
        * so below 560px the chip drops the date and uses its short label. A
        * badge that costs a game its title is not worth the information. */
       '@media (max-width:560px){.fb-seed{font-size:10px;padding:3px 3px 3px 7px;gap:4px}' +
-      '.fb-seed-day{display:none}.fb-seed .l{display:none}.fb-seed .s{display:inline}}';
+      '.fb-seed-day{display:none}.fb-seed .l{display:none}.fb-seed .s{display:inline}}' +
+      /* ONE TOGGLE ROW (2026-11-21, design review of the starting six on a phone): the day chip and Free/Paid sat
+       * in TWO different places — Free/Paid beside the title on 26 games, a whole row of its own under the topbar
+       * on 10 (HOPBOT, Bot Jumper, BOTRUN…), with the chip on yet another row. Now one compact row below the title
+       * on every phone: on the 10, the chip and the game's own .modebar share a row (.fb-togglerow, below); on the
+       * 26, the modebar follows the chip onto the topbar's second line. Only our chip moves; the Free/Paid control,
+       * its markup and its listeners are the game's own and are never rewritten. */
+      '.fb-togglerow{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;align-self:center;max-width:100%}' +
+      '.fb-togglerow>.modebar{align-self:center;width:auto;max-width:100%}' +
+      '.fb-togglerow>.modebar .modepill{flex:0 0 auto;font-size:12.5px;padding:4px 14px}' +
+      '@media (max-width:560px) and (orientation:portrait){' +
+      '.topbar:has(.modebar):has(.fb-seed)::after{content:"";flex-basis:100%;order:97;height:0}' +
+      '.topbar .fb-seed{order:98}.topbar .modebar{order:99}}';   /* chip first, as on the separate-row games */
     document.head.appendChild(css);
     box = document.createElement('span');
     box.className = 'fb-seed';
@@ -602,6 +614,15 @@ canvas{ touch-action:none; }
       /* no topbar (a non-chassis game): append to the main column, still in
        * flow, so it lands under the controls rather than on top of them */
       (document.querySelector('.wrap') || document.body).appendChild(box);
+    }
+    /* the separate-row generation (.wrap > .modebar): chip and Free/Paid share ONE row (see the CSS above) */
+    var mb = document.querySelector('.wrap > .modebar');
+    if (mb && mb.parentNode) {
+      var row = document.createElement('div');
+      row.className = 'fb-togglerow';
+      mb.parentNode.insertBefore(row, mb);
+      row.appendChild(box);
+      row.appendChild(mb);
     }
     paint();
   }
@@ -1120,6 +1141,7 @@ body:not(.mode-paid) .app .facts{ display:block !important; }
         <button class="modepill active" id="modeFree" type="button" role="tab">Free</button>
         <button class="modepill" id="modePaid" type="button" role="tab">Paid · 25</button>
       </div>
+      <button class="iconbtn" id="muteBtn" aria-label="Mute sound" title="Mute (M)">🔊</button>
       <button class="iconbtn" id="restartBtn" aria-label="Restart" title="Restart (R)">⟲</button>
       <button class="iconbtn" id="infoBtn" aria-label="How to play">ⓘ</button>
     </header>
@@ -2111,13 +2133,16 @@ if(!HEADLESS){
     const off=e=>{ e.preventDefault(); el.classList.remove('on'); };
     el.addEventListener('pointerdown',on); el.addEventListener('pointerup',off); el.addEventListener('pointercancel',off); el.addEventListener('pointerleave',off); }
   bindPad('padU',UP); bindPad('padD',DOWN); bindPad('padL',LEFT); bindPad('padR',RIGHT);
-  // centre button repurposed as MUTE (no fire button in BOTMAN)
-  (function(){ const b=document.getElementById('padFire'); if(!b)return; b.textContent='🔊'; b.setAttribute('aria-label','Mute');
-    b.addEventListener('pointerdown',e=>{ e.preventDefault(); muted=!muted; b.textContent=muted?'🔇':'🔊'; try{localStorage.setItem('bman_mute',muted?'1':'0');}catch(_){}}); })();
+  /* MUTE lives in the top bar (2026-11-21 design review: the d-pad CENTRE was Mute, so a thumb resting in the middle of
+     the cross silenced the game). A 4-way game with no action key gets a plain cross — the centre stays empty. */
+  (function(){ const c=document.getElementById('padFire'); if(c){ c.style.visibility='hidden'; c.setAttribute('aria-hidden','true'); c.tabIndex=-1; }
+    const b=document.getElementById('muteBtn'); if(!b)return;
+    const paint=()=>{ b.textContent=muted?'🔇':'🔊'; b.setAttribute('aria-label',muted?'Unmute sound':'Mute sound'); }; paint();
+    b.addEventListener('click',()=>{ muted=!muted; paint(); try{localStorage.setItem('bman_mute',muted?'1':'0');}catch(_){} }); })();
   const KEYS={ArrowUp:UP,ArrowDown:DOWN,ArrowLeft:LEFT,ArrowRight:RIGHT,w:UP,s:DOWN,a:LEFT,d:RIGHT,W:UP,S:DOWN,A:LEFT,D:RIGHT};
   addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeRules(); return; }
     if(e.key==='r'||e.key==='R'){ restart(); return; }
-    if(e.key==='m'||e.key==='M'){ muted=!muted; const b=document.getElementById('padFire'); if(b)b.textContent=muted?'🔇':'🔊'; try{localStorage.setItem('bman_mute',muted?'1':'0');}catch(_){} return; }
+    if(e.key==='m'||e.key==='M'){ const b=document.getElementById('muteBtn'); if(b) b.click(); return; }
     const d=KEYS[e.key]; if(d){ setWant(d); e.preventDefault(); } });
   // swipe on the canvas
   let tsx=0,tsy=0,tsw=false;
@@ -3625,7 +3650,7 @@ var FB_FAMILY_CODEC = (function(){
   }catch(e){ /* the family layer must never break a game */ }
 })();
 </script>
-<script id="fb-coach" data-fb-goal="Clear the maze of Beads while four hunters chase you." data-fb-touch="Swipe the maze" data-fb-keys="Arrows or WASD">
+<script id="fb-coach" data-fb-goal="Eat every bead. Dodge the hunters." data-fb-touch="Swipe to steer" data-fb-keys="Arrows or WASD">
 /* FinnBots COACH LAYER — the first 30 seconds (brief 1, 2026-10-27).
    Founder: "First 30 seconds of each of the six: starts instantly, the goal is obvious without reading, the first
    death/win feels good." Before this, a first-time player landed on a 115-193 word How to play card and had to read
